@@ -9,7 +9,8 @@ import {
   ClockIcon,
   LightBulbIcon,
   XMarkIcon,
-  LinkIcon
+  LinkIcon,
+  TrashIcon
 } from '@heroicons/react/24/solid';
 
 interface InputFormProps {
@@ -56,6 +57,10 @@ const COMMON_KEYWORDS = [
   '行動したくなる一言'
 ];
 
+const TEMPLATE_TEXT_HISTORY_KEY = 'template_text_history';
+const TEMPLATE_URL_HISTORY_KEY = 'template_url_history';
+const MAX_HISTORY = 10;
+
 const getRelatedKeywordsLocal = (theme: string): string[] => {
   const trimmed = theme.trim();
   if (!trimmed) return [];
@@ -78,6 +83,37 @@ const getRelatedKeywordsLocal = (theme: string): string[] => {
   ];
 
   return Array.from(new Set(merged)).slice(0, 15);
+};
+
+const readHistory = (key: string): string[] => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+  } catch {
+    return [];
+  }
+};
+
+const writeHistory = (key: string, values: string[]) => {
+  localStorage.setItem(key, JSON.stringify(values.slice(0, MAX_HISTORY)));
+};
+
+const addHistoryItem = (key: string, value: string): string[] => {
+  const trimmed = value.trim();
+  if (!trimmed) return readHistory(key);
+  const current = readHistory(key);
+  const next = [trimmed, ...current.filter((item) => item !== trimmed)].slice(0, MAX_HISTORY);
+  writeHistory(key, next);
+  return next;
+};
+
+const removeHistoryItem = (key: string, value: string): string[] => {
+  const next = readHistory(key).filter((item) => item !== value);
+  writeHistory(key, next);
+  return next;
 };
 
 export const InputForm: React.FC<InputFormProps> = ({
@@ -103,7 +139,11 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [history, setHistory] = useState<string[]>([]);
   const [showHistory, setShowHistory] = useState(false);
 
+  const [templateTextHistory, setTemplateTextHistory] = useState<string[]>([]);
+  const [templateUrlHistory, setTemplateUrlHistory] = useState<string[]>([]);
+
   const ITEMS_PER_PAGE = 5;
+  const isLoading = loadingState === LoadingState.LOADING;
 
   useEffect(() => {
     localStorage.setItem('form_theme', theme);
@@ -135,29 +175,45 @@ export const InputForm: React.FC<InputFormProps> = ({
 
   useEffect(() => {
     const saved = localStorage.getItem('theme_history');
-    if (saved) setHistory(JSON.parse(saved));
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setHistory(parsed);
+      } catch {
+        setHistory([]);
+      }
+    }
+
+    setTemplateTextHistory(readHistory(TEMPLATE_TEXT_HISTORY_KEY));
+    setTemplateUrlHistory(readHistory(TEMPLATE_URL_HISTORY_KEY));
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (theme.trim()) {
-      const newHistory = [theme, ...history.filter((h) => h !== theme)].slice(0, 5);
-      setHistory(newHistory);
-      localStorage.setItem('theme_history', JSON.stringify(newHistory));
+    if (!theme.trim()) return;
 
-      onGenerate(
-        theme,
-        length,
-        gender,
-        age,
-        templateText,
-        templateUrl,
-        insertPosition
-      );
-      setSuggestions([]);
-      setShowHistory(false);
-    }
+    const newHistory = [theme.trim(), ...history.filter((h) => h !== theme.trim())].slice(0, 5);
+    setHistory(newHistory);
+    localStorage.setItem('theme_history', JSON.stringify(newHistory));
+
+    const nextTemplateTextHistory = addHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, templateText);
+    const nextTemplateUrlHistory = addHistoryItem(TEMPLATE_URL_HISTORY_KEY, templateUrl);
+    setTemplateTextHistory(nextTemplateTextHistory);
+    setTemplateUrlHistory(nextTemplateUrlHistory);
+
+    onGenerate(
+      theme,
+      length,
+      gender,
+      age,
+      templateText,
+      templateUrl,
+      insertPosition
+    );
+
+    setSuggestions([]);
+    setShowHistory(false);
   };
 
   const handleSuggest = async () => {
@@ -189,6 +245,24 @@ export const InputForm: React.FC<InputFormProps> = ({
     setShowHistory(false);
   };
 
+  const handleTemplateTextSelect = (value: string) => {
+    setTemplateText(value);
+  };
+
+  const handleTemplateUrlSelect = (value: string) => {
+    setTemplateUrl(value);
+  };
+
+  const handleDeleteTemplateTextHistory = (value: string) => {
+    const next = removeHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, value);
+    setTemplateTextHistory(next);
+  };
+
+  const handleDeleteTemplateUrlHistory = (value: string) => {
+    const next = removeHistoryItem(TEMPLATE_URL_HISTORY_KEY, value);
+    setTemplateUrlHistory(next);
+  };
+
   const nextPage = () => {
     if ((suggestionPage + 1) * ITEMS_PER_PAGE < suggestions.length) {
       setSuggestionPage(suggestionPage + 1);
@@ -209,8 +283,6 @@ export const InputForm: React.FC<InputFormProps> = ({
     suggestionPage * ITEMS_PER_PAGE,
     (suggestionPage + 1) * ITEMS_PER_PAGE
   );
-
-  const isLoading = loadingState === LoadingState.LOADING;
 
   return (
     <div className="w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12">
@@ -357,28 +429,122 @@ export const InputForm: React.FC<InputFormProps> = ({
           </select>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
             <LinkIcon className="w-4 h-4" /> 決まり文挿入
           </label>
 
-          <input
-            type="text"
-            value={templateText}
-            onChange={(e) => setTemplateText(e.target.value)}
-            placeholder="例：詳しくはこちら👇"
-            className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium"
-            disabled={isLoading}
-          />
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={templateText}
+              onChange={(e) => setTemplateText(e.target.value)}
+              placeholder="例：詳しくはこちら👇"
+              className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium"
+              disabled={isLoading}
+            />
 
-          <input
-            type="text"
-            value={templateUrl}
-            onChange={(e) => setTemplateUrl(e.target.value)}
-            placeholder="例：https://example.com"
-            className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium"
-            disabled={isLoading}
-          />
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleTemplateTextSelect(e.target.value);
+              }}
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
+              disabled={isLoading || templateTextHistory.length === 0}
+            >
+              <option value="">
+                {templateTextHistory.length === 0 ? '決まり文の履歴はまだありません' : '決まり文の履歴から選択'}
+              </option>
+              {templateTextHistory.map((item, index) => (
+                <option key={`${item}-${index}`} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+
+            {templateTextHistory.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                {templateTextHistory.map((item, index) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleTemplateTextSelect(item)}
+                      className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors"
+                    >
+                      {item}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTemplateTextHistory(item)}
+                      className="text-slate-400 hover:text-red-500 transition-colors"
+                      aria-label={`決まり文履歴を削除: ${item}`}
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={templateUrl}
+              onChange={(e) => setTemplateUrl(e.target.value)}
+              placeholder="例：https://example.com"
+              className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium"
+              disabled={isLoading}
+            />
+
+            <select
+              value=""
+              onChange={(e) => {
+                if (e.target.value) handleTemplateUrlSelect(e.target.value);
+              }}
+              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
+              disabled={isLoading || templateUrlHistory.length === 0}
+            >
+              <option value="">
+                {templateUrlHistory.length === 0 ? 'リンクの履歴はまだありません' : 'リンクの履歴から選択'}
+              </option>
+              {templateUrlHistory.map((item, index) => (
+                <option key={`${item}-${index}`} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+
+            {templateUrlHistory.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                {templateUrlHistory.map((item, index) => (
+                  <div
+                    key={`${item}-${index}`}
+                    className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-2"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => handleTemplateUrlSelect(item)}
+                      className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors break-all text-left"
+                    >
+                      {item}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteTemplateUrlHistory(item)}
+                      className="text-slate-400 hover:text-red-500 transition-colors"
+                      aria-label={`リンク履歴を削除: ${item}`}
+                    >
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
 
           <select
             value={insertPosition}
