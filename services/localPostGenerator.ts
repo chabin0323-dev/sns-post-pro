@@ -18,13 +18,15 @@ const buildTemplateBlock = (templateText: string, templateUrl: string) => {
   return text || url;
 };
 
-const insertTemplate = (
+const buildTextOnlyTemplateBlock = (templateText: string) => {
+  return templateText.trim();
+};
+
+const insertBlock = (
   baseText: string,
-  templateText: string,
-  templateUrl: string,
+  block: string,
   insertPosition: 'start' | 'end'
 ) => {
-  const block = buildTemplateBlock(templateText, templateUrl);
   if (!block) return baseText;
 
   return insertPosition === 'start'
@@ -175,11 +177,18 @@ ${theme}の結果は変わります
 才能より、まず伝え方。
 ここを整えるだけで反応はかなり変わります。`;
 
+  const noteBlock = buildTemplateBlock(templateText, templateUrl);
+  const xBlock = buildTemplateBlock(templateText, templateUrl);
+
+  // TikTokだけはURLを入れない
+  // 必要なら決まり文だけ入れる仕様にしています
+  const tiktokBlock = buildTextOnlyTemplateBlock(templateText);
+
   return {
     title: hook,
-    content: insertTemplate(noteBase, templateText, templateUrl, insertPosition),
-    capcutScript: insertTemplate(tiktokBase, templateText, templateUrl, insertPosition),
-    xPost: insertTemplate(xBase, templateText, templateUrl, insertPosition),
+    content: insertBlock(noteBase, noteBlock, insertPosition),
+    capcutScript: insertBlock(tiktokBase, tiktokBlock, insertPosition),
+    xPost: insertBlock(xBase, xBlock, insertPosition),
     hashtags,
   };
 };
