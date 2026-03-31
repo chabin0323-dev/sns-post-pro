@@ -60,6 +60,81 @@ const COMMON_KEYWORDS = [
   '行動したくなる一言'
 ];
 
+const TIKTOK_HOOK_OPTIONS: Record<string, string[]> = {
+  恋愛: [
+    '先に結論を言います',
+    '実はみんな勘違いしています',
+    'この一言で流れが変わります',
+    '知らないままだと損です',
+    '相手の反応が変わるのはここです',
+    '恋愛が止まる人はここを外しています',
+    'まずここだけ見てください',
+    '本当に大事なのはここです',
+    'やってしまう人が多いです',
+    'この考え方で差がつきます'
+  ],
+  副業: [
+    '知らないと損です',
+    '先に結論を言います',
+    'これで差がつきます',
+    '稼げない人の共通点はこれです',
+    '最初にここを外すと遠回りです',
+    'やる順番を間違えないでください',
+    'まずここだけ覚えてください',
+    '伸びる人は最初にこれをやります',
+    'この考え方で結果が変わります',
+    '見落とすとかなりもったいないです'
+  ],
+  美容: [
+    '先に結論を言います',
+    'やってしまう人が多いです',
+    'まずここだけ覚えてください',
+    '実は逆効果になっています',
+    'これだけで印象が変わります',
+    '知らないと損です',
+    'キレイな人ほどここを意識しています',
+    '最初に見直すべきはここです',
+    'この習慣で差が出ます',
+    '見落としがちなポイントです'
+  ],
+  健康: [
+    'まずここだけ覚えてください',
+    '先に結論を言います',
+    'やってしまう人が多いです',
+    '実はここが原因です',
+    '知らないと損です',
+    '最初に見直すのはここです',
+    'この習慣で変わります',
+    '体調が整わない人はここを見落とします',
+    '本当に大事なのはここです',
+    '今すぐ意識してほしいです'
+  ],
+  SNS運用: [
+    '先に結論を言います',
+    '伸びない原因はここです',
+    'これで差がつきます',
+    '知らないと損です',
+    '伸びる人は最初にこれをやります',
+    'まずここだけ整えてください',
+    'やってしまう人が多いです',
+    '保存される投稿はここが違います',
+    'バズる前に必要なのはこれです',
+    '最初の3秒で決まります'
+  ],
+  汎用: [
+    '先に結論を言います',
+    '知らないと損です',
+    '実はみんな勘違いしています',
+    'まずここだけ見てください',
+    'これで差がつきます',
+    'やってしまう人が多いです',
+    '本当に大事なのはここです',
+    '最初にここを外さないでください',
+    'この考え方で変わります',
+    '見落とすともったいないです'
+  ]
+};
+
 const TEMPLATE_TEXT_HISTORY_KEY = 'template_text_history';
 const TEMPLATE_URL_HISTORY_KEY = 'template_url_history';
 const TIKTOK_TEMPLATE_TEXT_HISTORY_KEY = 'tiktok_template_text_history';
@@ -134,6 +209,7 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [templateText, setTemplateText] = useState(() => localStorage.getItem('form_template_text') || '詳しくはこちら👇');
   const [templateUrl, setTemplateUrl] = useState(() => localStorage.getItem('form_template_url') || '');
   const [tiktokTemplateText, setTiktokTemplateText] = useState(() => localStorage.getItem('form_tiktok_template_text') || '続きはプロフィールのリンクからどうぞ👇');
+  const [tiktokHookGenre, setTiktokHookGenre] = useState(() => localStorage.getItem('form_tiktok_hook_genre') || '汎用');
 
   const [insertPosition, setInsertPosition] = useState<'start' | 'end'>(() => {
     const saved = localStorage.getItem('form_insert_position');
@@ -152,6 +228,8 @@ export const InputForm: React.FC<InputFormProps> = ({
 
   const ITEMS_PER_PAGE = 5;
   const isLoading = loadingState === LoadingState.LOADING;
+  const tiktokGenreOptions = Object.keys(TIKTOK_HOOK_OPTIONS);
+  const currentTiktokHookOptions = TIKTOK_HOOK_OPTIONS[tiktokHookGenre] || TIKTOK_HOOK_OPTIONS['汎用'];
 
   useEffect(() => {
     localStorage.setItem('form_theme', theme);
@@ -180,6 +258,10 @@ export const InputForm: React.FC<InputFormProps> = ({
   useEffect(() => {
     localStorage.setItem('form_tiktok_template_text', tiktokTemplateText);
   }, [tiktokTemplateText]);
+
+  useEffect(() => {
+    localStorage.setItem('form_tiktok_hook_genre', tiktokHookGenre);
+  }, [tiktokHookGenre]);
 
   useEffect(() => {
     localStorage.setItem('form_insert_position', insertPosition);
@@ -553,6 +635,35 @@ export const InputForm: React.FC<InputFormProps> = ({
               </div>
 
               <div className="space-y-4">
+                <select
+                  value={tiktokHookGenre}
+                  onChange={(e) => setTiktokHookGenre(e.target.value)}
+                  className="w-full p-5 bg-white rounded-2xl border border-cyan-200 outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading}
+                >
+                  {tiktokGenreOptions.map((genre) => (
+                    <option key={genre} value={genre}>
+                      {genre}向けおすすめ
+                    </option>
+                  ))}
+                </select>
+
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) setTiktokTemplateText(e.target.value);
+                  }}
+                  className="w-full p-5 bg-white rounded-2xl border border-cyan-200 outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading}
+                >
+                  <option value="">おすすめ10個から選択</option>
+                  {currentTiktokHookOptions.map((item, index) => (
+                    <option key={`${item}-${index}`} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
                 <input
                   type="text"
                   value={tiktokTemplateText}
