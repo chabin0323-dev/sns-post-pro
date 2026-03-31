@@ -1,163 +1,48 @@
-// services/localPostGenerator.ts
-
-const getProfileLabel = (gender: string, age: string) => {
-  const safeGender = gender === '指定なし' ? '' : gender;
-  const safeAge = age === '指定なし' ? '' : age;
-  return `${safeAge}${safeGender}`.trim() || '幅広い層';
-};
-
-const getHashtags = (theme: string) => {
-  const cleaned = theme.replace(/\s+/g, '');
-  return [`#${cleaned}`, '#SNS投稿', '#発信力', '#行動改善', '#習慣化'];
-};
-
 export const generateSNSPostContent = (
   theme: string,
   length: string,
   gender: string,
-  age: string
+  age: string,
+  templateText: string,
+  templateUrl: string,
+  insertPosition: string
 ) => {
-  const profile = getProfileLabel(gender, age);
-  const hashtags = getHashtags(theme);
-  const hook = `【${theme}で結果が変わる人の共通点】`;
 
-  const noteContent = `${hook}
+  const hook = `【${theme}の真実】`;
 
-「${theme}を頑張っているのに、思うように結果が出ない」
-そんなふうに感じたことはありませんか？
+  const baseContent = `
+${hook}
 
-特に${profile}の人ほど、
-真面目に取り組むほど、
-「自分のやり方が合っているのか」が分からなくなりやすいです。
+${theme}で結果が出ない人の共通点は
+「順番を間違えていること」です。
 
-でも、結果が出ない理由は才能不足ではありません。
+正しくはこの3つ。
 
-多くの場合、
-足りないのは“努力”ではなく
-「順番」と「見せ方」です。
+・考え方
+・行動
+・継続
 
-たとえば${theme}で変化を出す人は、
-最初から大きく変えようとはしません。
+これだけで変わります。
+`.trim();
 
-まずは
-1. 目的をはっきりさせる
-2. 相手に伝わる形に整える
-3. 続けられるやり方に変える
+  // 🔥決まり文生成
+  const templateBlock = `
+${templateText}
+${templateUrl}
+`.trim();
 
-この3つを意識しています。
-
-逆に結果が止まりやすい人は、
-・何となく始める
-・伝えたいことを詰め込みすぎる
-・続けにくい形で頑張る
-
-この流れに入りやすいです。
-
-大切なのは、
-「もっと頑張ること」ではなく
-“伝わる形”に整えることです。
-
-今日から意識したいのはこの1つです。
-
-「この内容は、相手が一瞬で理解できるか？」
-
-ここを整えるだけで、
-${theme}の伝わり方は大きく変わります。
-
-最後にもう一度だけ。
-
-${theme}で結果を変える人は、
-特別な才能がある人ではありません。
-“伝わる順番”を知っている人です。
-
-まずは1回、
-伝え方の順番を整えることから始めてみてください。
-
-${hashtags.join(' ')}`;
-
-  const capcutScript = `${hook}
-
-ちょっと待ってください
-
-${theme}を頑張ってるのに
-結果が出ない人
-
-かなり多いです
-
-でも原因は
-能力不足じゃありません
-
-足りないのは
-努力じゃなくて
-
-順番です
-
-結果が出る人は
-最初に3つだけ
-意識しています
-
-1つ目
-目的をはっきりさせる
-
-2つ目
-相手に伝わる形にする
-
-3つ目
-続けられる形に変える
-
-この3つです
-
-逆に止まる人は
-何となく始めて
-
-言いたいことを
-詰め込みすぎて
-
-途中で苦しくなります
-
-だから続かない
-
-でも安心してください
-
-変えるべきなのは
-才能じゃなくて
-
-伝え方です
-
-今日から意識するのは
-たった1つ
-
-一瞬で伝わるか
-
-ここだけです
-
-これを整えるだけで
-${theme}の結果は変わります
-
-本当に大事なのは
-頑張り方より
-伝わる順番です
-
-まず1回
-整えてみてください
-
-続きは固定コメントへ`;
-
-  const xPost = `${theme}で結果が出ない人ほど、努力不足ではなく「順番」で損しています。
-
-大事なのは
-・目的をはっきりさせる
-・相手に伝わる形にする
-・続けられる形に変える
-
-才能より、まず伝え方。
-ここを整えるだけで反応はかなり変わります。`;
+  // 🔥挿入処理
+  const finalContent =
+    insertPosition === 'start'
+      ? `${templateBlock}\n\n${baseContent}`
+      : `${baseContent}\n\n${templateBlock}`;
 
   return {
     title: hook,
-    content: noteContent,
-    capcutScript,
-    xPost,
-    hashtags,
+    content: finalContent,
+
+    capcutScript: finalContent,
+
+    xPost: `${theme}で結果が出ない理由は「順番」です。\n\n${templateUrl}`
   };
 };
