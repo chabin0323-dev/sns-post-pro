@@ -70,6 +70,7 @@ const App: React.FC = () => {
     age: string,
     templateText: string,
     templateUrl: string,
+    tiktokTemplateText: string,
     insertPosition: 'start' | 'end'
   ) => {
     setLoadingState(LoadingState.LOADING);
@@ -84,6 +85,7 @@ const App: React.FC = () => {
         age,
         templateText,
         templateUrl,
+        tiktokTemplateText,
         insertPosition
       );
 
