@@ -41,6 +41,7 @@ export const generateSNSPostContent = (
   age: string,
   templateText: string,
   templateUrl: string,
+  tiktokTemplateText: string,
   insertPosition: 'start' | 'end'
 ) => {
   const profile = getProfileLabel(gender, age);
@@ -179,10 +180,7 @@ ${theme}の結果は変わります
 
   const noteBlock = buildTemplateBlock(templateText, templateUrl);
   const xBlock = buildTemplateBlock(templateText, templateUrl);
-
-  // TikTokだけはURLを入れない
-  // 必要なら決まり文だけ入れる仕様にしています
-  const tiktokBlock = buildTextOnlyTemplateBlock(templateText);
+  const tiktokBlock = buildTextOnlyTemplateBlock(tiktokTemplateText);
 
   return {
     title: hook,
