@@ -10,7 +10,9 @@ import {
   LightBulbIcon,
   XMarkIcon,
   LinkIcon,
-  TrashIcon
+  TrashIcon,
+  VideoCameraIcon,
+  DocumentTextIcon
 } from '@heroicons/react/24/solid';
 
 interface InputFormProps {
@@ -21,6 +23,7 @@ interface InputFormProps {
     age: string,
     templateText: string,
     templateUrl: string,
+    tiktokTemplateText: string,
     insertPosition: 'start' | 'end'
   ) => void;
   onCancel: () => void;
@@ -59,6 +62,7 @@ const COMMON_KEYWORDS = [
 
 const TEMPLATE_TEXT_HISTORY_KEY = 'template_text_history';
 const TEMPLATE_URL_HISTORY_KEY = 'template_url_history';
+const TIKTOK_TEMPLATE_TEXT_HISTORY_KEY = 'tiktok_template_text_history';
 const MAX_HISTORY = 10;
 
 const getRelatedKeywordsLocal = (theme: string): string[] => {
@@ -126,8 +130,11 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [gender, setGender] = useState(() => localStorage.getItem('form_gender') || '男性');
   const [age, setAge] = useState(() => localStorage.getItem('form_age') || '50代以上');
   const [length, setLength] = useState(() => localStorage.getItem('form_length') || '500文字 (長文)');
+
   const [templateText, setTemplateText] = useState(() => localStorage.getItem('form_template_text') || '詳しくはこちら👇');
   const [templateUrl, setTemplateUrl] = useState(() => localStorage.getItem('form_template_url') || '');
+  const [tiktokTemplateText, setTiktokTemplateText] = useState(() => localStorage.getItem('form_tiktok_template_text') || '続きはプロフィールのリンクからどうぞ👇');
+
   const [insertPosition, setInsertPosition] = useState<'start' | 'end'>(() => {
     const saved = localStorage.getItem('form_insert_position');
     return saved === 'start' ? 'start' : 'end';
@@ -141,6 +148,7 @@ export const InputForm: React.FC<InputFormProps> = ({
 
   const [templateTextHistory, setTemplateTextHistory] = useState<string[]>([]);
   const [templateUrlHistory, setTemplateUrlHistory] = useState<string[]>([]);
+  const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>([]);
 
   const ITEMS_PER_PAGE = 5;
   const isLoading = loadingState === LoadingState.LOADING;
@@ -170,6 +178,10 @@ export const InputForm: React.FC<InputFormProps> = ({
   }, [templateUrl]);
 
   useEffect(() => {
+    localStorage.setItem('form_tiktok_template_text', tiktokTemplateText);
+  }, [tiktokTemplateText]);
+
+  useEffect(() => {
     localStorage.setItem('form_insert_position', insertPosition);
   }, [insertPosition]);
 
@@ -186,21 +198,20 @@ export const InputForm: React.FC<InputFormProps> = ({
 
     setTemplateTextHistory(readHistory(TEMPLATE_TEXT_HISTORY_KEY));
     setTemplateUrlHistory(readHistory(TEMPLATE_URL_HISTORY_KEY));
+    setTiktokTemplateTextHistory(readHistory(TIKTOK_TEMPLATE_TEXT_HISTORY_KEY));
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!theme.trim()) return;
 
     const newHistory = [theme.trim(), ...history.filter((h) => h !== theme.trim())].slice(0, 5);
     setHistory(newHistory);
     localStorage.setItem('theme_history', JSON.stringify(newHistory));
 
-    const nextTemplateTextHistory = addHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, templateText);
-    const nextTemplateUrlHistory = addHistoryItem(TEMPLATE_URL_HISTORY_KEY, templateUrl);
-    setTemplateTextHistory(nextTemplateTextHistory);
-    setTemplateUrlHistory(nextTemplateUrlHistory);
+    setTemplateTextHistory(addHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, templateText));
+    setTemplateUrlHistory(addHistoryItem(TEMPLATE_URL_HISTORY_KEY, templateUrl));
+    setTiktokTemplateTextHistory(addHistoryItem(TIKTOK_TEMPLATE_TEXT_HISTORY_KEY, tiktokTemplateText));
 
     onGenerate(
       theme,
@@ -209,6 +220,7 @@ export const InputForm: React.FC<InputFormProps> = ({
       age,
       templateText,
       templateUrl,
+      tiktokTemplateText,
       insertPosition
     );
 
@@ -245,24 +257,6 @@ export const InputForm: React.FC<InputFormProps> = ({
     setShowHistory(false);
   };
 
-  const handleTemplateTextSelect = (value: string) => {
-    setTemplateText(value);
-  };
-
-  const handleTemplateUrlSelect = (value: string) => {
-    setTemplateUrl(value);
-  };
-
-  const handleDeleteTemplateTextHistory = (value: string) => {
-    const next = removeHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, value);
-    setTemplateTextHistory(next);
-  };
-
-  const handleDeleteTemplateUrlHistory = (value: string) => {
-    const next = removeHistoryItem(TEMPLATE_URL_HISTORY_KEY, value);
-    setTemplateUrlHistory(next);
-  };
-
   const nextPage = () => {
     if ((suggestionPage + 1) * ITEMS_PER_PAGE < suggestions.length) {
       setSuggestionPage(suggestionPage + 1);
@@ -284,277 +278,316 @@ export const InputForm: React.FC<InputFormProps> = ({
     (suggestionPage + 1) * ITEMS_PER_PAGE
   );
 
-  return (
-    <div className="w-full bg-white rounded-[40px] shadow-2xl p-8 md:p-12">
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="space-y-3">
-          <label className="text-sm font-bold text-slate-500">投稿のテーマ</label>
-          <div className="relative">
-            <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 pointer-events-none" />
-            <input
-              type="text"
-              value={theme}
-              onChange={(e) => setTheme(e.target.value)}
-              placeholder="例：旅行（単語だけでもOK！）"
-              className="w-full pl-14 pr-32 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
-              disabled={isLoading}
-            />
-            <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3 text-xs font-black tracking-tighter">
-              <button
-                type="button"
-                onClick={handleSuggest}
-                disabled={!theme.trim() || isSuggesting}
-                className={`transition-colors ${theme.trim() ? 'text-slate-600 hover:text-indigo-600' : 'text-slate-300 pointer-events-none'}`}
-              >
-                {isSuggesting ? '...' : '提案'}
-              </button>
-              <span className="text-slate-200">|</span>
-              <button
-                type="button"
-                onClick={toggleHistory}
-                className="text-slate-600 hover:text-indigo-600 transition-colors"
-              >
-                履歴
-              </button>
-            </div>
-          </div>
+  const renderHistoryChips = (
+    items: string[],
+    onSelect: (value: string) => void,
+    onDelete: (value: string) => void
+  ) => {
+    if (items.length === 0) return null;
 
-          {showHistory && history.length > 0 && (
-            <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
-              <div className="w-full text-[10px] font-black text-slate-400 mb-2 flex items-center justify-between uppercase tracking-widest">
-                <div className="flex items-center gap-1">
-                  <ClockIcon className="w-3 h-3" /> 最近の入力テーマ
-                </div>
+    return (
+      <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+        {items.map((item, index) => (
+          <div
+            key={`${item}-${index}`}
+            className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-2 max-w-full"
+          >
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors break-all text-left"
+            >
+              {item}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(item)}
+              className="text-slate-400 hover:text-red-500 transition-colors shrink-0"
+            >
+              <TrashIcon className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  return (
+    <div className="w-full bg-white rounded-[40px] shadow-2xl p-6 md:p-10">
+      <form onSubmit={handleSubmit} className="space-y-8">
+        <div className="grid gap-8">
+          <div className="space-y-3">
+            <label className="text-sm font-bold text-slate-500">投稿のテーマ</label>
+            <div className="relative">
+              <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 pointer-events-none" />
+              <input
+                type="text"
+                value={theme}
+                onChange={(e) => setTheme(e.target.value)}
+                placeholder="例：旅行（単語だけでもOK！）"
+                className="w-full pl-14 pr-32 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
+                disabled={isLoading}
+              />
+              <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3 text-xs font-black tracking-tighter">
                 <button
                   type="button"
-                  onClick={() => setShowHistory(false)}
-                  className="hover:text-red-500 transition-colors"
+                  onClick={handleSuggest}
+                  disabled={!theme.trim() || isSuggesting}
+                  className={`transition-colors ${theme.trim() ? 'text-slate-600 hover:text-indigo-600' : 'text-slate-300 pointer-events-none'}`}
                 >
-                  閉じる
+                  {isSuggesting ? '...' : '提案'}
+                </button>
+                <span className="text-slate-200">|</span>
+                <button
+                  type="button"
+                  onClick={toggleHistory}
+                  className="text-slate-600 hover:text-indigo-600 transition-colors"
+                >
+                  履歴
                 </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {history.map((h, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => selectKeyword(h)}
-                    className="px-4 py-2 bg-white text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:border-indigo-500 border border-slate-200 transition-all"
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
             </div>
-          )}
 
-          {suggestions.length > 0 && (
-            <div className="flex flex-wrap gap-2 p-4 bg-indigo-50 rounded-2xl border border-indigo-100/50">
-              <div className="w-full text-[10px] font-bold text-indigo-400 mb-2 flex items-center justify-between uppercase tracking-widest">
-                <div className="flex items-center gap-1">
-                  <LightBulbIcon className="w-3 h-3" /> おすすめのキーワード
-                </div>
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={prevPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
-                    戻る
-                  </button>
-                  <span className="text-indigo-200">|</span>
-                  <button type="button" onClick={nextPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
-                    次
+            {showHistory && history.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
+                <div className="w-full text-[10px] font-black text-slate-400 mb-2 flex items-center justify-between uppercase tracking-widest">
+                  <div className="flex items-center gap-1">
+                    <ClockIcon className="w-3 h-3" /> 最近の入力テーマ
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowHistory(false)}
+                    className="hover:text-red-500 transition-colors"
+                  >
+                    閉じる
                   </button>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {currentSuggestions.map((kw, i) => (
-                  <button
-                    key={`${suggestionPage}-${i}`}
-                    type="button"
-                    onClick={() => selectKeyword(kw)}
-                    className="px-4 py-2 bg-white text-indigo-600 text-sm font-bold rounded-full shadow-sm hover:shadow-md transition-all border border-indigo-100"
-                  >
-                    {kw}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-3">
-          <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
-            <UserIcon className="w-4 h-4" /> 筆者プロフィール
-          </label>
-          <div className="grid grid-cols-2 gap-4">
-            <select
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-              className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-              disabled={isLoading}
-            >
-              <option>男性</option>
-              <option>女性</option>
-              <option>指定なし</option>
-            </select>
-            <select
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-              disabled={isLoading}
-            >
-              <option>50代以上</option>
-              <option>40代</option>
-              <option>30代</option>
-              <option>20代</option>
-              <option>10代</option>
-              <option>指定なし</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
-            <AdjustmentsHorizontalIcon className="w-4 h-4" /> 文字数（目標）
-          </label>
-          <select
-            value={length}
-            onChange={(e) => setLength(e.target.value)}
-            className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-            disabled={isLoading}
-          >
-            <option>100文字 (短文)</option>
-            <option>200文字 (サクッと)</option>
-            <option>300文字 (標準)</option>
-            <option>400文字 (充実)</option>
-            <option>500文字 (長文)</option>
-          </select>
-        </div>
-
-        <div className="space-y-4">
-          <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
-            <LinkIcon className="w-4 h-4" /> 決まり文挿入
-          </label>
-
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={templateText}
-              onChange={(e) => setTemplateText(e.target.value)}
-              placeholder="例：詳しくはこちら👇"
-              className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium"
-              disabled={isLoading}
-            />
-
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) handleTemplateTextSelect(e.target.value);
-              }}
-              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-              disabled={isLoading || templateTextHistory.length === 0}
-            >
-              <option value="">
-                {templateTextHistory.length === 0 ? '決まり文の履歴はまだありません' : '決まり文の履歴から選択'}
-              </option>
-              {templateTextHistory.map((item, index) => (
-                <option key={`${item}-${index}`} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            {templateTextHistory.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                {templateTextHistory.map((item, index) => (
-                  <div
-                    key={`${item}-${index}`}
-                    className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-2"
-                  >
+                <div className="flex flex-wrap gap-2">
+                  {history.map((h, i) => (
                     <button
+                      key={i}
                       type="button"
-                      onClick={() => handleTemplateTextSelect(item)}
-                      className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors"
+                      onClick={() => selectKeyword(h)}
+                      className="px-4 py-2 bg-white text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:border-indigo-500 border border-slate-200 transition-all"
                     >
-                      {item}
+                      {h}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTemplateTextHistory(item)}
-                      className="text-slate-400 hover:text-red-500 transition-colors"
-                      aria-label={`決まり文履歴を削除: ${item}`}
-                    >
-                      <TrashIcon className="w-4 h-4" />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {suggestions.length > 0 && (
+              <div className="flex flex-wrap gap-2 p-4 bg-indigo-50 rounded-2xl border border-indigo-100/50">
+                <div className="w-full text-[10px] font-bold text-indigo-400 mb-2 flex items-center justify-between uppercase tracking-widest">
+                  <div className="flex items-center gap-1">
+                    <LightBulbIcon className="w-3 h-3" /> おすすめのキーワード
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button type="button" onClick={prevPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
+                      戻る
+                    </button>
+                    <span className="text-indigo-200">|</span>
+                    <button type="button" onClick={nextPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
+                      次
                     </button>
                   </div>
-                ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {currentSuggestions.map((kw, i) => (
+                    <button
+                      key={`${suggestionPage}-${i}`}
+                      type="button"
+                      onClick={() => selectKeyword(kw)}
+                      className="px-4 py-2 bg-white text-indigo-600 text-sm font-bold rounded-full shadow-sm hover:shadow-md transition-all border border-indigo-100"
+                    >
+                      {kw}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>
 
-          <div className="space-y-2">
-            <input
-              type="text"
-              value={templateUrl}
-              onChange={(e) => setTemplateUrl(e.target.value)}
-              placeholder="例：https://example.com"
-              className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium"
-              disabled={isLoading}
-            />
-
-            <select
-              value=""
-              onChange={(e) => {
-                if (e.target.value) handleTemplateUrlSelect(e.target.value);
-              }}
-              className="w-full p-4 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-              disabled={isLoading || templateUrlHistory.length === 0}
-            >
-              <option value="">
-                {templateUrlHistory.length === 0 ? 'リンクの履歴はまだありません' : 'リンクの履歴から選択'}
-              </option>
-              {templateUrlHistory.map((item, index) => (
-                <option key={`${item}-${index}`} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-
-            {templateUrlHistory.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                {templateUrlHistory.map((item, index) => (
-                  <div
-                    key={`${item}-${index}`}
-                    className="flex items-center gap-2 bg-white border border-slate-200 rounded-full px-3 py-2"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => handleTemplateUrlSelect(item)}
-                      className="text-sm font-bold text-slate-700 hover:text-indigo-600 transition-colors break-all text-left"
-                    >
-                      {item}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteTemplateUrlHistory(item)}
-                      className="text-slate-400 hover:text-red-500 transition-colors"
-                      aria-label={`リンク履歴を削除: ${item}`}
-                    >
-                      <TrashIcon className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                <UserIcon className="w-4 h-4" /> 筆者プロフィール
+              </label>
+              <div className="grid grid-cols-2 gap-4">
+                <select
+                  value={gender}
+                  onChange={(e) => setGender(e.target.value)}
+                  className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading}
+                >
+                  <option>男性</option>
+                  <option>女性</option>
+                  <option>指定なし</option>
+                </select>
+                <select
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading}
+                >
+                  <option>50代以上</option>
+                  <option>40代</option>
+                  <option>30代</option>
+                  <option>20代</option>
+                  <option>10代</option>
+                  <option>指定なし</option>
+                </select>
               </div>
-            )}
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
+                <AdjustmentsHorizontalIcon className="w-4 h-4" /> 文字数（目標）
+              </label>
+              <select
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading}
+              >
+                <option>100文字 (短文)</option>
+                <option>200文字 (サクッと)</option>
+                <option>300文字 (標準)</option>
+                <option>400文字 (充実)</option>
+                <option>500文字 (長文)</option>
+              </select>
+            </div>
           </div>
 
-          <select
-            value={insertPosition}
-            onChange={(e) => setInsertPosition(e.target.value as 'start' | 'end')}
-            className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-            disabled={isLoading}
-          >
-            <option value="start">最初に挿入</option>
-            <option value="end">最後に挿入</option>
-          </select>
+          <div className="space-y-6">
+            <div className="rounded-3xl border border-slate-200 p-5 md:p-6 bg-slate-50/70">
+              <div className="flex items-center gap-2 mb-4">
+                <DocumentTextIcon className="w-5 h-5 text-indigo-500" />
+                <h3 className="font-black text-slate-700">note・X 用の共通挿入</h3>
+              </div>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={templateText}
+                  onChange={(e) => setTemplateText(e.target.value)}
+                  placeholder="例：詳しくはこちら👇"
+                  className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium"
+                  disabled={isLoading}
+                />
+
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) setTemplateText(e.target.value);
+                  }}
+                  className="w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading || templateTextHistory.length === 0}
+                >
+                  <option value="">
+                    {templateTextHistory.length === 0 ? '決まり文の履歴はまだありません' : '決まり文の履歴から選択'}
+                  </option>
+                  {templateTextHistory.map((item, index) => (
+                    <option key={`${item}-${index}`} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
+                {renderHistoryChips(
+                  templateTextHistory,
+                  (value) => setTemplateText(value),
+                  (value) => setTemplateTextHistory(removeHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, value))
+                )}
+
+                <input
+                  type="text"
+                  value={templateUrl}
+                  onChange={(e) => setTemplateUrl(e.target.value)}
+                  placeholder="例：https://example.com"
+                  className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium"
+                  disabled={isLoading}
+                />
+
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) setTemplateUrl(e.target.value);
+                  }}
+                  className="w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading || templateUrlHistory.length === 0}
+                >
+                  <option value="">
+                    {templateUrlHistory.length === 0 ? 'リンクの履歴はまだありません' : 'リンクの履歴から選択'}
+                  </option>
+                  {templateUrlHistory.map((item, index) => (
+                    <option key={`${item}-${index}`} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
+                {renderHistoryChips(
+                  templateUrlHistory,
+                  (value) => setTemplateUrl(value),
+                  (value) => setTemplateUrlHistory(removeHistoryItem(TEMPLATE_URL_HISTORY_KEY, value))
+                )}
+
+                <select
+                  value={insertPosition}
+                  onChange={(e) => setInsertPosition(e.target.value as 'start' | 'end')}
+                  className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading}
+                >
+                  <option value="start">最初に挿入</option>
+                  <option value="end">最後に挿入</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="rounded-3xl border border-cyan-200 p-5 md:p-6 bg-cyan-50/70">
+              <div className="flex items-center gap-2 mb-4">
+                <VideoCameraIcon className="w-5 h-5 text-cyan-600" />
+                <h3 className="font-black text-slate-700">TikTok 専用の決まり文</h3>
+              </div>
+
+              <div className="space-y-4">
+                <input
+                  type="text"
+                  value={tiktokTemplateText}
+                  onChange={(e) => setTiktokTemplateText(e.target.value)}
+                  placeholder="例：続きはプロフィールのリンクからどうぞ👇"
+                  className="w-full p-5 bg-white rounded-2xl border border-cyan-200 outline-none font-medium"
+                  disabled={isLoading}
+                />
+
+                <select
+                  value=""
+                  onChange={(e) => {
+                    if (e.target.value) setTiktokTemplateText(e.target.value);
+                  }}
+                  className="w-full p-4 bg-white rounded-2xl border border-cyan-200 outline-none font-medium appearance-none cursor-pointer"
+                  disabled={isLoading || tiktokTemplateTextHistory.length === 0}
+                >
+                  <option value="">
+                    {tiktokTemplateTextHistory.length === 0 ? 'TikTok決まり文の履歴はまだありません' : 'TikTok決まり文の履歴から選択'}
+                  </option>
+                  {tiktokTemplateTextHistory.map((item, index) => (
+                    <option key={`${item}-${index}`} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+
+                {renderHistoryChips(
+                  tiktokTemplateTextHistory,
+                  (value) => setTiktokTemplateText(value),
+                  (value) => setTiktokTemplateTextHistory(removeHistoryItem(TIKTOK_TEMPLATE_TEXT_HISTORY_KEY, value))
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="space-y-6">
@@ -568,10 +601,8 @@ export const InputForm: React.FC<InputFormProps> = ({
                   : 'bg-slate-200 text-slate-400'
               }`}
             >
-              <>
-                <span className="text-xl">生成する</span>
-                <PaperAirplaneIcon className="w-5 h-5" />
-              </>
+              <span className="text-xl">生成する</span>
+              <PaperAirplaneIcon className="w-5 h-5" />
             </button>
           ) : (
             <div className="flex items-center gap-4">
