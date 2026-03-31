@@ -1,3 +1,5 @@
+// components/InputForm.tsx
+
 import React, { useState, useEffect } from 'react';
 import { LoadingState } from '../types';
 import {
@@ -12,7 +14,9 @@ import {
   LinkIcon,
   TrashIcon,
   VideoCameraIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  ChevronDownIcon,
+  ChevronUpIcon
 } from '@heroicons/react/24/solid';
 
 interface InputFormProps {
@@ -195,6 +199,32 @@ const removeHistoryItem = (key: string, value: string): string[] => {
   return next;
 };
 
+const SectionHeader: React.FC<{
+  icon: React.ReactNode;
+  title: string;
+  subtitle: string;
+  isOpen: boolean;
+  onToggle: () => void;
+  accent: string;
+}> = ({ icon, title, subtitle, isOpen, onToggle, accent }) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    className={`w-full flex items-center justify-between gap-4 rounded-3xl border p-5 text-left transition-all ${accent}`}
+  >
+    <div className="flex items-center gap-4 min-w-0">
+      <div className="shrink-0">{icon}</div>
+      <div className="min-w-0">
+        <div className="font-black text-base md:text-lg text-slate-800">{title}</div>
+        <div className="text-xs md:text-sm text-slate-500 mt-1">{subtitle}</div>
+      </div>
+    </div>
+    <div className="shrink-0 text-slate-500">
+      {isOpen ? <ChevronUpIcon className="w-5 h-5" /> : <ChevronDownIcon className="w-5 h-5" />}
+    </div>
+  </button>
+);
+
 export const InputForm: React.FC<InputFormProps> = ({
   onGenerate,
   onCancel,
@@ -225,6 +255,10 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [templateTextHistory, setTemplateTextHistory] = useState<string[]>([]);
   const [templateUrlHistory, setTemplateUrlHistory] = useState<string[]>([]);
   const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>([]);
+
+  const [openBasic, setOpenBasic] = useState(false);
+  const [openCommon, setOpenCommon] = useState(false);
+  const [openTiktok, setOpenTiktok] = useState(false);
 
   const ITEMS_PER_PAGE = 5;
   const isLoading = loadingState === LoadingState.LOADING;
@@ -395,313 +429,345 @@ export const InputForm: React.FC<InputFormProps> = ({
   };
 
   return (
-    <div className="w-full bg-white rounded-[40px] shadow-2xl p-6 md:p-10">
-      <form onSubmit={handleSubmit} className="space-y-8">
-        <div className="grid gap-8">
-          <div className="space-y-3">
-            <label className="text-sm font-bold text-slate-500">投稿のテーマ</label>
-            <div className="relative">
-              <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 pointer-events-none" />
-              <input
-                type="text"
-                value={theme}
-                onChange={(e) => setTheme(e.target.value)}
-                placeholder="例：旅行（単語だけでもOK！）"
-                className="w-full pl-14 pr-32 py-5 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
-                disabled={isLoading}
-              />
-              <div className="absolute right-5 top-1/2 -translate-y-1/2 flex items-center gap-3 text-xs font-black tracking-tighter">
-                <button
-                  type="button"
-                  onClick={handleSuggest}
-                  disabled={!theme.trim() || isSuggesting}
-                  className={`transition-colors ${theme.trim() ? 'text-slate-600 hover:text-indigo-600' : 'text-slate-300 pointer-events-none'}`}
-                >
-                  {isSuggesting ? '...' : '提案'}
-                </button>
-                <span className="text-slate-200">|</span>
-                <button
-                  type="button"
-                  onClick={toggleHistory}
-                  className="text-slate-600 hover:text-indigo-600 transition-colors"
-                >
-                  履歴
-                </button>
-              </div>
+    <div className="w-full bg-white rounded-[40px] shadow-2xl p-5 md:p-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="rounded-[32px] bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 md:p-8 text-white">
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 bg-white/10 rounded-full px-4 py-2 text-xs font-black tracking-widest uppercase">
+              <SparklesIcon className="w-4 h-4" />
+              Quick Post Generator
             </div>
-
-            {showHistory && history.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
-                <div className="w-full text-[10px] font-black text-slate-400 mb-2 flex items-center justify-between uppercase tracking-widest">
-                  <div className="flex items-center gap-1">
-                    <ClockIcon className="w-3 h-3" /> 最近の入力テーマ
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setShowHistory(false)}
-                    className="hover:text-red-500 transition-colors"
-                  >
-                    閉じる
-                  </button>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {history.map((h, i) => (
-                    <button
-                      key={i}
-                      type="button"
-                      onClick={() => selectKeyword(h)}
-                      className="px-4 py-2 bg-white text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:border-indigo-500 border border-slate-200 transition-all"
-                    >
-                      {h}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {suggestions.length > 0 && (
-              <div className="flex flex-wrap gap-2 p-4 bg-indigo-50 rounded-2xl border border-indigo-100/50">
-                <div className="w-full text-[10px] font-bold text-indigo-400 mb-2 flex items-center justify-between uppercase tracking-widest">
-                  <div className="flex items-center gap-1">
-                    <LightBulbIcon className="w-3 h-3" /> おすすめのキーワード
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button type="button" onClick={prevPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
-                      戻る
-                    </button>
-                    <span className="text-indigo-200">|</span>
-                    <button type="button" onClick={nextPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
-                      次
-                    </button>
-                  </div>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {currentSuggestions.map((kw, i) => (
-                    <button
-                      key={`${suggestionPage}-${i}`}
-                      type="button"
-                      onClick={() => selectKeyword(kw)}
-                      className="px-4 py-2 bg-white text-indigo-600 text-sm font-bold rounded-full shadow-sm hover:shadow-md transition-all border border-indigo-100"
-                    >
-                      {kw}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
-                <UserIcon className="w-4 h-4" /> 筆者プロフィール
-              </label>
-              <div className="grid grid-cols-2 gap-4">
-                <select
-                  value={gender}
-                  onChange={(e) => setGender(e.target.value)}
-                  className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading}
-                >
-                  <option>男性</option>
-                  <option>女性</option>
-                  <option>指定なし</option>
-                </select>
-                <select
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading}
-                >
-                  <option>50代以上</option>
-                  <option>40代</option>
-                  <option>30代</option>
-                  <option>20代</option>
-                  <option>10代</option>
-                  <option>指定なし</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-sm font-bold text-slate-500 flex items-center gap-2">
-                <AdjustmentsHorizontalIcon className="w-4 h-4" /> 文字数（目標）
-              </label>
-              <select
-                value={length}
-                onChange={(e) => setLength(e.target.value)}
-                className="w-full p-5 bg-slate-50 rounded-2xl border-none outline-none font-medium appearance-none cursor-pointer"
-                disabled={isLoading}
-              >
-                <option>100文字 (短文)</option>
-                <option>200文字 (サクッと)</option>
-                <option>300文字 (標準)</option>
-                <option>400文字 (充実)</option>
-                <option>500文字 (長文)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="rounded-3xl border border-slate-200 p-5 md:p-6 bg-slate-50/70">
-              <div className="flex items-center gap-2 mb-4">
-                <DocumentTextIcon className="w-5 h-5 text-indigo-500" />
-                <h3 className="font-black text-slate-700">note・X 用の共通挿入</h3>
-              </div>
-
-              <div className="space-y-4">
-                <input
-                  type="text"
-                  value={templateText}
-                  onChange={(e) => setTemplateText(e.target.value)}
-                  placeholder="例：詳しくはこちら👇"
-                  className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium"
-                  disabled={isLoading}
-                />
-
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) setTemplateText(e.target.value);
-                  }}
-                  className="w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading || templateTextHistory.length === 0}
-                >
-                  <option value="">
-                    {templateTextHistory.length === 0 ? '決まり文の履歴はまだありません' : '決まり文の履歴から選択'}
-                  </option>
-                  {templateTextHistory.map((item, index) => (
-                    <option key={`${item}-${index}`} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                {renderHistoryChips(
-                  templateTextHistory,
-                  (value) => setTemplateText(value),
-                  (value) => setTemplateTextHistory(removeHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, value))
-                )}
-
-                <input
-                  type="text"
-                  value={templateUrl}
-                  onChange={(e) => setTemplateUrl(e.target.value)}
-                  placeholder="例：https://example.com"
-                  className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium"
-                  disabled={isLoading}
-                />
-
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) setTemplateUrl(e.target.value);
-                  }}
-                  className="w-full p-4 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading || templateUrlHistory.length === 0}
-                >
-                  <option value="">
-                    {templateUrlHistory.length === 0 ? 'リンクの履歴はまだありません' : 'リンクの履歴から選択'}
-                  </option>
-                  {templateUrlHistory.map((item, index) => (
-                    <option key={`${item}-${index}`} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                {renderHistoryChips(
-                  templateUrlHistory,
-                  (value) => setTemplateUrl(value),
-                  (value) => setTemplateUrlHistory(removeHistoryItem(TEMPLATE_URL_HISTORY_KEY, value))
-                )}
-
-                <select
-                  value={insertPosition}
-                  onChange={(e) => setInsertPosition(e.target.value as 'start' | 'end')}
-                  className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading}
-                >
-                  <option value="start">最初に挿入</option>
-                  <option value="end">最後に挿入</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="rounded-3xl border border-cyan-200 p-5 md:p-6 bg-cyan-50/70">
-              <div className="flex items-center gap-2 mb-4">
-                <VideoCameraIcon className="w-5 h-5 text-cyan-600" />
-                <h3 className="font-black text-slate-700">TikTok 専用の決まり文</h3>
-              </div>
-
-              <div className="space-y-4">
-                <select
-                  value={tiktokHookGenre}
-                  onChange={(e) => setTiktokHookGenre(e.target.value)}
-                  className="w-full p-5 bg-white rounded-2xl border border-cyan-200 outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading}
-                >
-                  {tiktokGenreOptions.map((genre) => (
-                    <option key={genre} value={genre}>
-                      {genre}向けおすすめ
-                    </option>
-                  ))}
-                </select>
-
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) setTiktokTemplateText(e.target.value);
-                  }}
-                  className="w-full p-5 bg-white rounded-2xl border border-cyan-200 outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading}
-                >
-                  <option value="">おすすめ10個から選択</option>
-                  {currentTiktokHookOptions.map((item, index) => (
-                    <option key={`${item}-${index}`} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                <input
-                  type="text"
-                  value={tiktokTemplateText}
-                  onChange={(e) => setTiktokTemplateText(e.target.value)}
-                  placeholder="例：続きはプロフィールのリンクからどうぞ👇"
-                  className="w-full p-5 bg-white rounded-2xl border border-cyan-200 outline-none font-medium"
-                  disabled={isLoading}
-                />
-
-                <select
-                  value=""
-                  onChange={(e) => {
-                    if (e.target.value) setTiktokTemplateText(e.target.value);
-                  }}
-                  className="w-full p-4 bg-white rounded-2xl border border-cyan-200 outline-none font-medium appearance-none cursor-pointer"
-                  disabled={isLoading || tiktokTemplateTextHistory.length === 0}
-                >
-                  <option value="">
-                    {tiktokTemplateTextHistory.length === 0 ? 'TikTok決まり文の履歴はまだありません' : 'TikTok決まり文の履歴から選択'}
-                  </option>
-                  {tiktokTemplateTextHistory.map((item, index) => (
-                    <option key={`${item}-${index}`} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-
-                {renderHistoryChips(
-                  tiktokTemplateTextHistory,
-                  (value) => setTiktokTemplateText(value),
-                  (value) => setTiktokTemplateTextHistory(removeHistoryItem(TIKTOK_TEMPLATE_TEXT_HISTORY_KEY, value))
-                )}
-              </div>
-            </div>
+            <h3 className="text-2xl md:text-3xl font-black leading-tight">
+              テーマを入れて、<br className="md:hidden" />
+              すぐ投稿できる形に。
+            </h3>
+            <p className="text-sm md:text-base text-white/75">
+              最初はテーマだけ入力。必要な設定だけ下で開いて調整できます。
+            </p>
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="rounded-[32px] border border-indigo-100 bg-indigo-50/50 p-5 md:p-6 space-y-4">
+          <label className="text-sm font-black text-slate-700">投稿テーマ</label>
+
+          <div className="relative">
+            <SparklesIcon className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400 pointer-events-none" />
+            <input
+              type="text"
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              placeholder="例：恋愛、ダイエット、副業、SNS運用"
+              className="w-full pl-14 pr-32 py-5 bg-white border border-indigo-100 rounded-2xl focus:ring-2 focus:ring-indigo-500 outline-none font-medium transition-all"
+              disabled={isLoading}
+            />
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-3 text-xs font-black tracking-tighter">
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={!theme.trim() || isSuggesting}
+                className={`transition-colors ${theme.trim() ? 'text-slate-600 hover:text-indigo-600' : 'text-slate-300 pointer-events-none'}`}
+              >
+                {isSuggesting ? '...' : '提案'}
+              </button>
+              <span className="text-slate-200">|</span>
+              <button
+                type="button"
+                onClick={toggleHistory}
+                className="text-slate-600 hover:text-indigo-600 transition-colors"
+              >
+                履歴
+              </button>
+            </div>
+          </div>
+
+          {showHistory && history.length > 0 && (
+            <div className="flex flex-wrap gap-2 p-4 bg-white rounded-2xl border border-slate-200 shadow-inner">
+              <div className="w-full text-[10px] font-black text-slate-400 mb-2 flex items-center justify-between uppercase tracking-widest">
+                <div className="flex items-center gap-1">
+                  <ClockIcon className="w-3 h-3" /> 最近の入力テーマ
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(false)}
+                  className="hover:text-red-500 transition-colors"
+                >
+                  閉じる
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {history.map((h, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectKeyword(h)}
+                    className="px-4 py-2 bg-slate-50 text-slate-700 text-sm font-bold rounded-xl shadow-sm hover:border-indigo-500 border border-slate-200 transition-all"
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2 p-4 bg-white rounded-2xl border border-indigo-100/50">
+              <div className="w-full text-[10px] font-bold text-indigo-400 mb-2 flex items-center justify-between uppercase tracking-widest">
+                <div className="flex items-center gap-1">
+                  <LightBulbIcon className="w-3 h-3" /> おすすめのキーワード
+                </div>
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={prevPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
+                    戻る
+                  </button>
+                  <span className="text-indigo-200">|</span>
+                  <button type="button" onClick={nextPage} className="text-slate-500 hover:text-indigo-600 transition-colors">
+                    次
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {currentSuggestions.map((kw, i) => (
+                  <button
+                    key={`${suggestionPage}-${i}`}
+                    type="button"
+                    onClick={() => selectKeyword(kw)}
+                    className="px-4 py-2 bg-indigo-50 text-indigo-600 text-sm font-bold rounded-full shadow-sm hover:shadow-md transition-all border border-indigo-100"
+                  >
+                    {kw}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <SectionHeader
+            icon={<div className="p-3 rounded-2xl bg-slate-100"><UserIcon className="w-5 h-5 text-slate-700" /></div>}
+            title="投稿設定"
+            subtitle="性別・年代・文字数を設定"
+            isOpen={openBasic}
+            onToggle={() => setOpenBasic(!openBasic)}
+            accent="bg-white border-slate-200 hover:border-slate-300"
+          />
+
+          {openBasic && (
+            <div className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-5 md:p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-500">筆者プロフィール</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
+                      disabled={isLoading}
+                    >
+                      <option>男性</option>
+                      <option>女性</option>
+                      <option>指定なし</option>
+                    </select>
+                    <select
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                      className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
+                      disabled={isLoading}
+                    >
+                      <option>50代以上</option>
+                      <option>40代</option>
+                      <option>30代</option>
+                      <option>20代</option>
+                      <option>10代</option>
+                      <option>指定なし</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-500">文字数（目標）</label>
+                  <select
+                    value={length}
+                    onChange={(e) => setLength(e.target.value)}
+                    className="w-full p-5 bg-white rounded-2xl border border-slate-200 outline-none font-medium appearance-none cursor-pointer"
+                    disabled={isLoading}
+                  >
+                    <option>100文字 (短文)</option>
+                    <option>200文字 (サクッと)</option>
+                    <option>300文字 (標準)</option>
+                    <option>400文字 (充実)</option>
+                    <option>500文字 (長文)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <SectionHeader
+            icon={<div className="p-3 rounded-2xl bg-indigo-100"><DocumentTextIcon className="w-5 h-5 text-indigo-700" /></div>}
+            title="note・X 用の共通設定"
+            subtitle="決まり文・URL・挿入位置を設定"
+            isOpen={openCommon}
+            onToggle={() => setOpenCommon(!openCommon)}
+            accent="bg-indigo-50/60 border-indigo-100 hover:border-indigo-200"
+          />
+
+          {openCommon && (
+            <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/60 p-5 md:p-6 space-y-4">
+              <input
+                type="text"
+                value={templateText}
+                onChange={(e) => setTemplateText(e.target.value)}
+                placeholder="例：詳しくはこちら👇"
+                className="w-full p-5 bg-white rounded-2xl border border-indigo-100 outline-none font-medium"
+                disabled={isLoading}
+              />
+
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) setTemplateText(e.target.value);
+                }}
+                className="w-full p-4 bg-white rounded-2xl border border-indigo-100 outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading || templateTextHistory.length === 0}
+              >
+                <option value="">
+                  {templateTextHistory.length === 0 ? '決まり文の履歴はまだありません' : '決まり文の履歴から選択'}
+                </option>
+                {templateTextHistory.map((item, index) => (
+                  <option key={`${item}-${index}`} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+
+              {renderHistoryChips(
+                templateTextHistory,
+                (value) => setTemplateText(value),
+                (value) => setTemplateTextHistory(removeHistoryItem(TEMPLATE_TEXT_HISTORY_KEY, value))
+              )}
+
+              <input
+                type="text"
+                value={templateUrl}
+                onChange={(e) => setTemplateUrl(e.target.value)}
+                placeholder="例：https://example.com"
+                className="w-full p-5 bg-white rounded-2xl border border-indigo-100 outline-none font-medium"
+                disabled={isLoading}
+              />
+
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) setTemplateUrl(e.target.value);
+                }}
+                className="w-full p-4 bg-white rounded-2xl border border-indigo-100 outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading || templateUrlHistory.length === 0}
+              >
+                <option value="">
+                  {templateUrlHistory.length === 0 ? 'リンクの履歴はまだありません' : 'リンクの履歴から選択'}
+                </option>
+                {templateUrlHistory.map((item, index) => (
+                  <option key={`${item}-${index}`} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+
+              {renderHistoryChips(
+                templateUrlHistory,
+                (value) => setTemplateUrl(value),
+                (value) => setTemplateUrlHistory(removeHistoryItem(TEMPLATE_URL_HISTORY_KEY, value))
+              )}
+
+              <select
+                value={insertPosition}
+                onChange={(e) => setInsertPosition(e.target.value as 'start' | 'end')}
+                className="w-full p-5 bg-white rounded-2xl border border-indigo-100 outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading}
+              >
+                <option value="start">最初に挿入</option>
+                <option value="end">最後に挿入</option>
+              </select>
+            </div>
+          )}
+
+          <SectionHeader
+            icon={<div className="p-3 rounded-2xl bg-cyan-100"><VideoCameraIcon className="w-5 h-5 text-cyan-700" /></div>}
+            title="TikTok 専用設定"
+            subtitle="おすすめ語句から選んで、専用の決まり文を作成"
+            isOpen={openTiktok}
+            onToggle={() => setOpenTiktok(!openTiktok)}
+            accent="bg-cyan-50/60 border-cyan-100 hover:border-cyan-200"
+          />
+
+          {openTiktok && (
+            <div className="rounded-[28px] border border-cyan-100 bg-cyan-50/60 p-5 md:p-6 space-y-4">
+              <select
+                value={tiktokHookGenre}
+                onChange={(e) => setTiktokHookGenre(e.target.value)}
+                className="w-full p-5 bg-white rounded-2xl border border-cyan-100 outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading}
+              >
+                {tiktokGenreOptions.map((genre) => (
+                  <option key={genre} value={genre}>
+                    {genre}向けおすすめ
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) setTiktokTemplateText(e.target.value);
+                }}
+                className="w-full p-5 bg-white rounded-2xl border border-cyan-100 outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading}
+              >
+                <option value="">おすすめ10個から選択</option>
+                {currentTiktokHookOptions.map((item, index) => (
+                  <option key={`${item}-${index}`} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="text"
+                value={tiktokTemplateText}
+                onChange={(e) => setTiktokTemplateText(e.target.value)}
+                placeholder="例：続きはプロフィールのリンクからどうぞ👇"
+                className="w-full p-5 bg-white rounded-2xl border border-cyan-100 outline-none font-medium"
+                disabled={isLoading}
+              />
+
+              <select
+                value=""
+                onChange={(e) => {
+                  if (e.target.value) setTiktokTemplateText(e.target.value);
+                }}
+                className="w-full p-4 bg-white rounded-2xl border border-cyan-100 outline-none font-medium appearance-none cursor-pointer"
+                disabled={isLoading || tiktokTemplateTextHistory.length === 0}
+              >
+                <option value="">
+                  {tiktokTemplateTextHistory.length === 0 ? 'TikTok決まり文の履歴はまだありません' : 'TikTok決まり文の履歴から選択'}
+                </option>
+                {tiktokTemplateTextHistory.map((item, index) => (
+                  <option key={`${item}-${index}`} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+
+              {renderHistoryChips(
+                tiktokTemplateTextHistory,
+                (value) => setTiktokTemplateText(value),
+                (value) => setTiktokTemplateTextHistory(removeHistoryItem(TIKTOK_TEMPLATE_TEXT_HISTORY_KEY, value))
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6 pt-2">
           {!isLoading ? (
             <button
               type="submit"
