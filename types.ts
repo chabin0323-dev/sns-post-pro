@@ -23,8 +23,6 @@ export interface GeneratedPost {
   hashtags: string[];
   capcutScript: string;
   createdAt: string;
-  templateMode: TemplateMode;
-  isPremiumGenerated: boolean;
 }
 
 export interface GenerateInput {
@@ -46,5 +44,4 @@ export interface ThemeSuggestion {
   id: string;
   label: string;
   category: string;
-  premium?: boolean;
 }
