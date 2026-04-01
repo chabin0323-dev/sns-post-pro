@@ -345,7 +345,7 @@ export default function InputForm({
         <div style={sectionTitleStyle}>テーマ提案</div>
         <div>
           {themeSuggestions.map((item) => {
-            const locked = item.premium && !premiumEnabled;
+            const locked = !!item.premium && !premiumEnabled;
 
             return (
               <button
