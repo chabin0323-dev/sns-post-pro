@@ -15,53 +15,58 @@ const platformRules: Record<
   Platform,
   {
     maxLength: number;
-    style: string;
     cta: string;
     hashtagBase: string[];
   }
 > = {
   TikTok: {
     maxLength: 220,
-    style: '短く、冒頭で惹きつける。テンポ重視。',
     cta: '続きはコメントで教えてください。',
     hashtagBase: ['#TikTok', '#おすすめ', '#投稿ネタ'],
   },
   'Instagram Reels': {
     maxLength: 240,
-    style: '共感＋保存重視。TikTok流用向き。',
     cta: '保存して後で見返してください。',
     hashtagBase: ['#リール', '#InstagramReels', '#インスタ運用'],
   },
   'YouTube Shorts': {
     maxLength: 260,
-    style: '価値提示＋続き誘導。',
     cta: '続きはチャンネルでチェックしてください。',
     hashtagBase: ['#shorts', '#YouTubeShorts', '#動画投稿'],
   },
   'Instagram Feed': {
     maxLength: 300,
-    style: '見やすく改行。共感と保存されやすさ重視。',
     cta: 'あとで見返せるよう保存してください。',
     hashtagBase: ['#Instagram運用', '#インスタ集客', '#投稿作成'],
   },
   X: {
     maxLength: 140,
-    style: '短く、刺さる一言。共感・気づき重視。',
     cta: '共感したら保存・シェアしてください。',
     hashtagBase: ['#X運用', '#SNS運用', '#発信'],
   },
   note: {
     maxLength: 900,
-    style: '導入→本文→まとめを意識。読みやすさ重視。',
     cta: '続きは本文で詳しく解説します。',
     hashtagBase: ['#note', '#コンテンツ販売', '#文章術'],
   },
 };
 
 const hooks = {
-  strong: ['知らないと損です。', 'これ、意外とやっていませんか？', '結論から言うと、ここが重要です。'],
-  soft: ['こんな悩みはありませんか？', '今日はやさしく解説します。', '無理なく続けるコツをお伝えします。'],
-  emotional: ['そのままだと、もったいないです。', '頑張っているのに届かない人へ。', '少しの工夫で反応は変わります。'],
+  strong: [
+    '知らないと損です。',
+    'これ、意外とやっていませんか？',
+    '結論から言うと、ここが重要です。',
+  ],
+  soft: [
+    'こんな悩みはありませんか？',
+    '今日はやさしく解説します。',
+    '無理なく続けるコツをお伝えします。',
+  ],
+  emotional: [
+    'そのままだと、もったいないです。',
+    '頑張っているのに届かない人へ。',
+    '少しの工夫で反応は変わります。',
+  ],
 };
 
 export const FREE_LIMIT = 10;
@@ -94,11 +99,7 @@ function buildTitle(theme: string, platform: Platform, purpose: string) {
     'YouTube Shorts': `【${theme}】Shortsで伝わる実践ポイント`,
   };
 
-  if (purpose.trim()) {
-    return `${baseMap[platform]}｜${purpose}`;
-  }
-
-  return baseMap[platform];
+  return purpose.trim() ? `${baseMap[platform]}｜${purpose}` : baseMap[platform];
 }
 
 function buildVideoContent(input: GenerateInput, platform: Platform) {
@@ -114,7 +115,7 @@ function buildVideoContent(input: GenerateInput, platform: Platform) {
       ? 'Instagram Reels向けに保存されやすくまとめます。'
       : 'YouTube Shorts向けに続きが気になる形でまとめます。';
 
-  const content = [
+  const parts = [
     hook,
     `テーマは「${input.theme}」です。`,
     platformLine,
@@ -124,16 +125,14 @@ function buildVideoContent(input: GenerateInput, platform: Platform) {
     '① 最初の1秒で興味を引く',
     '② 1テーマ1メッセージで伝える',
     '③ 最後に保存・コメントなどの行動を促す',
-  ]
-    .filter(Boolean)
-    .join('\n');
+    input.includeCTA ? platformRules[platform].cta : '',
+  ];
 
-  return truncateText(content, platformRules[platform].maxLength);
+  return truncateText(parts.filter(Boolean).join('\n'), platformRules[platform].maxLength);
 }
 
 function buildTextContent(input: GenerateInput, platform: Platform) {
-  const rule = platformRules[platform];
-  const content =
+  const body =
     platform === 'note'
       ? `テーマは「${input.theme}」です。
 
@@ -145,7 +144,8 @@ function buildTextContent(input: GenerateInput, platform: Platform) {
 次に、読む人が「自分ごと」と感じる悩みを最初に置きます。
 そのうえで、すぐ試せる具体策を3つほど入れると、読了率と保存率が上がりやすくなります。
 
-最後に、次の行動が分かる一文を入れると、反応につながりやすくなります。`
+最後に、次の行動が分かる一文を入れると、反応につながりやすくなります。
+${input.includeCTA ? `\n${platformRules[platform].cta}` : ''}`
       : `テーマは「${input.theme}」です。
 対象は${input.audience || '初心者'}です。
 目的は${input.purpose || '反応アップ'}です。
@@ -154,9 +154,10 @@ function buildTextContent(input: GenerateInput, platform: Platform) {
 結論を先に伝える。
 共感を入れる。
 すぐ試せる具体策を入れる。
-最後に行動を促す。`;
+最後に行動を促す。
+${input.includeCTA ? `\n${platformRules[platform].cta}` : ''}`;
 
-  return truncateText(content, rule.maxLength);
+  return truncateText(body, platformRules[platform].maxLength);
 }
 
 function applyTemplate(
@@ -178,8 +179,8 @@ function buildHashtags(input: GenerateInput) {
   if (!input.includeHashtags) return [];
 
   const base = platformRules[input.platform].hashtagBase;
-  const themeTag = `#${input.theme.replace(/\s+/g, '')}`;
-  const purposeTag = input.purpose ? `#${input.purpose.replace(/\s+/g, '')}` : null;
+  const themeTag = input.theme.trim() ? `#${input.theme.replace(/\s+/g, '')}` : null;
+  const purposeTag = input.purpose.trim() ? `#${input.purpose.replace(/\s+/g, '')}` : null;
 
   return [...base, themeTag, purposeTag].filter(Boolean) as string[];
 }
