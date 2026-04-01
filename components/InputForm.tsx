@@ -6,7 +6,8 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   XMarkIcon,
-  ClockIcon
+  ClockIcon,
+  LightBulbIcon
 } from '@heroicons/react/24/solid';
 
 interface InputFormProps {
@@ -27,6 +28,35 @@ interface InputFormProps {
 }
 
 const MAX_HISTORY = 10;
+const ITEMS_PER_PAGE = 5;
+
+const LOCAL_KEYWORD_MAP: Record<string, string[]> = {
+  恋愛: ['片想い', '復縁', '告白', '脈あり', '本音', '恋愛心理', '忘れられない人', '距離感', '好き避け', '連絡頻度'],
+  美容: ['スキンケア', '毛穴', '乾燥対策', 'エイジングケア', '垢抜け', 'メイク時短', '美容習慣', '小顔', 'UV対策', '美肌'],
+  ダイエット: ['食事改善', '痩せ習慣', 'リバウンド', '代謝アップ', 'ながら運動', '脂肪燃焼', '腸活', 'むくみ改善', '間食対策', '朝活'],
+  副業: ['在宅ワーク', 'SNS集客', '初心者副業', '収益化', 'コンテンツ販売', '時短副業', 'AI活用', 'スキル販売', '継続力', '仕組み化'],
+  SNS: ['バズ投稿', '伸びる書き方', '保存される投稿', '投稿ネタ', 'フォロワー増加', 'リール戦略', '導線設計', 'プロフィール改善', '毎日投稿', '共感文章'],
+  仕事: ['人間関係', '評価される人', '習慣改善', '時間管理', 'モチベーション', '会話術', '信頼構築', 'キャリア', '転職不安', '成長戦略'],
+  健康: ['睡眠改善', '疲労回復', '自律神経', '腸内環境', '肩こり対策', 'ストレス解消', '朝習慣', '温活', '姿勢改善', '生活改善'],
+};
+
+const COMMON_KEYWORDS = [
+  '初心者向け',
+  '知らないと損',
+  '今すぐできる',
+  '習慣化',
+  'やってはいけない',
+  '続けるコツ',
+  '選ばれる方法',
+  '失敗しない考え方',
+  'おすすめの始め方',
+  '結果が変わるコツ',
+  '伸びる型',
+  '売れる導線',
+  '共感される書き方',
+  '保存したくなる内容',
+  '行動したくなる一言'
+];
 
 const readHistory = (key: string): string[] => {
   try {
@@ -57,6 +87,30 @@ const removeHistory = (key: string, value: string) => {
   const next = readHistory(key).filter((item) => item !== value);
   writeHistory(key, next);
   return next;
+};
+
+const getRelatedKeywordsLocal = (theme: string): string[] => {
+  const trimmed = theme.trim();
+  if (!trimmed) return [];
+
+  const matchedEntry = Object.entries(LOCAL_KEYWORD_MAP).find(([key]) =>
+    trimmed.includes(key)
+  );
+
+  const base = matchedEntry ? matchedEntry[1] : [];
+  const merged = [
+    ...base,
+    `${trimmed} 初心者`,
+    `${trimmed} コツ`,
+    `${trimmed} やり方`,
+    `${trimmed} テンプレ`,
+    `${trimmed} 失敗`,
+    `${trimmed} 改善`,
+    `${trimmed} 投稿例`,
+    ...COMMON_KEYWORDS
+  ];
+
+  return Array.from(new Set(merged)).slice(0, 15);
 };
 
 const SectionButton: React.FC<{
@@ -150,6 +204,10 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [openTiktok, setOpenTiktok] = useState(false);
   const [showThemeHistory, setShowThemeHistory] = useState(false);
 
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionPage, setSuggestionPage] = useState(0);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+
   const HISTORY_KEYS = useMemo(
     () => ({
       theme: 'history_theme',
@@ -187,6 +245,47 @@ export const InputForm: React.FC<InputFormProps> = ({
     setTiktokInsertPositionHistory(addHistory(HISTORY_KEYS.tiktokInsertPosition, tiktokInsertPosition));
   };
 
+  const handleSuggest = async () => {
+    if (!theme.trim()) return;
+    setIsSuggesting(true);
+    setSuggestionPage(0);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const keywords = getRelatedKeywordsLocal(theme);
+      setSuggestions(keywords);
+      setShowThemeHistory(false);
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const handleSelectSuggestion = (value: string) => {
+    setTheme(value);
+    setSuggestions([]);
+  };
+
+  const nextSuggestionPage = () => {
+    if ((suggestionPage + 1) * ITEMS_PER_PAGE < suggestions.length) {
+      setSuggestionPage(suggestionPage + 1);
+    } else {
+      setSuggestionPage(0);
+    }
+  };
+
+  const prevSuggestionPage = () => {
+    if (suggestionPage > 0) {
+      setSuggestionPage(suggestionPage - 1);
+    } else {
+      setSuggestionPage(Math.floor((suggestions.length - 1) / ITEMS_PER_PAGE));
+    }
+  };
+
+  const currentSuggestions = suggestions.slice(
+    suggestionPage * ITEMS_PER_PAGE,
+    (suggestionPage + 1) * ITEMS_PER_PAGE
+  );
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!theme.trim()) return;
@@ -217,13 +316,26 @@ export const InputForm: React.FC<InputFormProps> = ({
         <div className="bg-indigo-50 p-6 rounded-3xl space-y-4">
           <div className="flex items-center justify-between gap-3">
             <label className="font-bold text-slate-800">投稿テーマ</label>
-            <button
-              type="button"
-              onClick={() => setShowThemeHistory(!showThemeHistory)}
-              className="text-xs font-black text-indigo-600"
-            >
-              履歴
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={!theme.trim() || isSuggesting}
+                className={`text-xs font-black ${theme.trim() ? 'text-indigo-600' : 'text-slate-300'}`}
+              >
+                {isSuggesting ? '...' : '提案'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowThemeHistory(!showThemeHistory);
+                  setSuggestions([]);
+                }}
+                className="text-xs font-black text-indigo-600"
+              >
+                履歴
+              </button>
+            </div>
           </div>
 
           <div className="relative">
@@ -244,6 +356,35 @@ export const InputForm: React.FC<InputFormProps> = ({
               onSelect={setTheme}
               onDelete={(value) => setThemeHistory(removeHistory(HISTORY_KEYS.theme, value))}
             />
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="rounded-2xl border border-indigo-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[11px] font-black text-indigo-500 uppercase tracking-wider">
+                  <LightBulbIcon className="w-3 h-3" />
+                  おすすめテーマ
+                </div>
+                <div className="flex items-center gap-3 text-xs font-black text-slate-500">
+                  <button type="button" onClick={prevSuggestionPage}>戻る</button>
+                  <span>|</span>
+                  <button type="button" onClick={nextSuggestionPage}>次</button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {currentSuggestions.map((item, index) => (
+                  <button
+                    key={`${item}-${index}`}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(item)}
+                    className="px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-sm font-bold text-indigo-600"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
         </div>
 
