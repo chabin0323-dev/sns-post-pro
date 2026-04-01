@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { LoadingState } from '../types';
 import {
   SparklesIcon,
   PaperAirplaneIcon,
   ChevronDownIcon,
-  ChevronUpIcon
+  ChevronUpIcon,
+  XMarkIcon,
+  ClockIcon
 } from '@heroicons/react/24/solid';
 
 interface InputFormProps {
@@ -24,10 +26,112 @@ interface InputFormProps {
   progress: number;
 }
 
+const MAX_HISTORY = 10;
+
+const readHistory = (key: string): string[] => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+  } catch {
+    return [];
+  }
+};
+
+const writeHistory = (key: string, values: string[]) => {
+  localStorage.setItem(key, JSON.stringify(values.slice(0, MAX_HISTORY)));
+};
+
+const addHistory = (key: string, value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return readHistory(key);
+  const current = readHistory(key);
+  const next = [trimmed, ...current.filter((item) => item !== trimmed)].slice(0, MAX_HISTORY);
+  writeHistory(key, next);
+  return next;
+};
+
+const removeHistory = (key: string, value: string) => {
+  const next = readHistory(key).filter((item) => item !== value);
+  writeHistory(key, next);
+  return next;
+};
+
+const SectionButton: React.FC<{
+  title: string;
+  subtitle: string;
+  isOpen: boolean;
+  onClick: () => void;
+  className?: string;
+}> = ({ title, subtitle, isOpen, onClick, className = '' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`w-full flex items-center justify-between rounded-2xl p-4 text-left border ${className}`}
+  >
+    <div>
+      <div className="font-black text-slate-800">{title}</div>
+      <div className="text-xs text-slate-500 mt-1">{subtitle}</div>
+    </div>
+    {isOpen ? (
+      <ChevronUpIcon className="w-5 h-5 text-slate-500" />
+    ) : (
+      <ChevronDownIcon className="w-5 h-5 text-slate-500" />
+    )}
+  </button>
+);
+
+const HistoryChips: React.FC<{
+  title: string;
+  items: string[];
+  onSelect: (value: string) => void;
+  onDelete: (value: string) => void;
+}> = ({ title, items, onSelect, onDelete }) => {
+  if (items.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-3">
+      <div className="flex items-center gap-2 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+        <ClockIcon className="w-3 h-3" />
+        {title}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, index) => (
+          <div
+            key={`${item}-${index}`}
+            className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 max-w-full"
+          >
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="text-sm font-bold text-slate-700 hover:text-indigo-600 break-all text-left"
+            >
+              {item}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(item)}
+              className="shrink-0 text-slate-400 hover:text-red-500"
+              aria-label={`${title}を削除`}
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const InputForm: React.FC<InputFormProps> = ({
   onGenerate,
-  loadingState
+  onCancel,
+  loadingState,
+  progress
 }) => {
+  const isLoading = loadingState === LoadingState.LOADING;
 
   const [theme, setTheme] = useState('');
   const [gender, setGender] = useState('男性');
@@ -36,7 +140,6 @@ export const InputForm: React.FC<InputFormProps> = ({
 
   const [templateText, setTemplateText] = useState('詳しくはこちら👇');
   const [templateUrl, setTemplateUrl] = useState('');
-
   const [tiktokTemplateText, setTiktokTemplateText] = useState('続きはプロフィールから👇');
 
   const [insertPosition, setInsertPosition] = useState<'start' | 'end'>('end');
@@ -45,12 +148,50 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [openBasic, setOpenBasic] = useState(false);
   const [openCommon, setOpenCommon] = useState(false);
   const [openTiktok, setOpenTiktok] = useState(false);
+  const [showThemeHistory, setShowThemeHistory] = useState(false);
 
-  const isLoading = loadingState === LoadingState.LOADING;
+  const HISTORY_KEYS = useMemo(
+    () => ({
+      theme: 'history_theme',
+      gender: 'history_gender',
+      age: 'history_age',
+      length: 'history_length',
+      templateText: 'history_template_text',
+      templateUrl: 'history_template_url',
+      tiktokTemplateText: 'history_tiktok_template_text',
+      insertPosition: 'history_insert_position',
+      tiktokInsertPosition: 'history_tiktok_insert_position'
+    }),
+    []
+  );
+
+  const [themeHistory, setThemeHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.theme));
+  const [genderHistory, setGenderHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.gender));
+  const [ageHistory, setAgeHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.age));
+  const [lengthHistory, setLengthHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.length));
+  const [templateTextHistory, setTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.templateText));
+  const [templateUrlHistory, setTemplateUrlHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.templateUrl));
+  const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokTemplateText));
+  const [insertPositionHistory, setInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.insertPosition));
+  const [tiktokInsertPositionHistory, setTiktokInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokInsertPosition));
+
+  const saveAllHistories = () => {
+    setThemeHistory(addHistory(HISTORY_KEYS.theme, theme));
+    setGenderHistory(addHistory(HISTORY_KEYS.gender, gender));
+    setAgeHistory(addHistory(HISTORY_KEYS.age, age));
+    setLengthHistory(addHistory(HISTORY_KEYS.length, length));
+    setTemplateTextHistory(addHistory(HISTORY_KEYS.templateText, templateText));
+    setTemplateUrlHistory(addHistory(HISTORY_KEYS.templateUrl, templateUrl));
+    setTiktokTemplateTextHistory(addHistory(HISTORY_KEYS.tiktokTemplateText, tiktokTemplateText));
+    setInsertPositionHistory(addHistory(HISTORY_KEYS.insertPosition, insertPosition));
+    setTiktokInsertPositionHistory(addHistory(HISTORY_KEYS.tiktokInsertPosition, tiktokInsertPosition));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!theme.trim()) return;
+
+    saveAllHistories();
 
     onGenerate(
       theme,
@@ -68,151 +209,240 @@ export const InputForm: React.FC<InputFormProps> = ({
   return (
     <div className="w-full bg-white rounded-[40px] shadow-2xl p-6 md:p-10">
       <form onSubmit={handleSubmit} className="space-y-6">
-
-        {/* ===== タイトル ===== */}
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-black">
-            SNS投稿を一瞬で作成
-          </h2>
-          <p className="text-sm text-gray-500">
-            テーマを入れるだけで投稿完成
-          </p>
+          <h2 className="text-3xl font-black">SNS投稿を一瞬で作成</h2>
+          <p className="text-sm text-gray-500">テーマを入れるだけで投稿完成</p>
         </div>
 
-        {/* ===== テーマ入力 ===== */}
-        <div className="bg-indigo-50 p-6 rounded-3xl">
-          <label className="font-bold">投稿テーマ</label>
+        <div className="bg-indigo-50 p-6 rounded-3xl space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <label className="font-bold text-slate-800">投稿テーマ</label>
+            <button
+              type="button"
+              onClick={() => setShowThemeHistory(!showThemeHistory)}
+              className="text-xs font-black text-indigo-600"
+            >
+              履歴
+            </button>
+          </div>
 
-          <div className="relative mt-3">
+          <div className="relative">
             <SparklesIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
             <input
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               placeholder="例：恋愛、副業、ダイエット"
               className="w-full pl-12 pr-4 py-4 rounded-2xl border outline-none"
+              disabled={isLoading}
             />
           </div>
+
+          {showThemeHistory && (
+            <HistoryChips
+              title="テーマ履歴"
+              items={themeHistory}
+              onSelect={setTheme}
+              onDelete={(value) => setThemeHistory(removeHistory(HISTORY_KEYS.theme, value))}
+            />
+          )}
         </div>
 
-        {/* ===== 投稿設定 ===== */}
-        <div>
-          <button
-            type="button"
+        <div className="space-y-4">
+          <SectionButton
+            title="投稿設定"
+            subtitle="性別・年代・文字数"
+            isOpen={openBasic}
             onClick={() => setOpenBasic(!openBasic)}
-            className="w-full flex justify-between items-center p-4 bg-gray-100 rounded-2xl"
-          >
-            投稿設定
-            {openBasic ? <ChevronUpIcon className="w-5"/> : <ChevronDownIcon className="w-5"/>}
-          </button>
+            className="bg-gray-100 border-gray-200"
+          />
 
           {openBasic && (
-            <div className="p-4 space-y-4 bg-gray-50 rounded-2xl mt-2">
-
-              <select value={gender} onChange={(e)=>setGender(e.target.value)} className="w-full p-3 rounded-xl border">
+            <div className="p-4 space-y-4 bg-gray-50 rounded-2xl border border-gray-200">
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              >
                 <option>男性</option>
                 <option>女性</option>
+                <option>指定なし</option>
               </select>
+              <HistoryChips
+                title="性別履歴"
+                items={genderHistory}
+                onSelect={setGender}
+                onDelete={(value) => setGenderHistory(removeHistory(HISTORY_KEYS.gender, value))}
+              />
 
-              <select value={age} onChange={(e)=>setAge(e.target.value)} className="w-full p-3 rounded-xl border">
+              <select
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              >
                 <option>20代</option>
                 <option>30代</option>
                 <option>40代</option>
+                <option>50代以上</option>
+                <option>指定なし</option>
               </select>
+              <HistoryChips
+                title="年代履歴"
+                items={ageHistory}
+                onSelect={setAge}
+                onDelete={(value) => setAgeHistory(removeHistory(HISTORY_KEYS.age, value))}
+              />
 
-              <select value={length} onChange={(e)=>setLength(e.target.value)} className="w-full p-3 rounded-xl border">
+              <select
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              >
                 <option>200文字</option>
                 <option>300文字</option>
                 <option>500文字</option>
               </select>
-
+              <HistoryChips
+                title="文字数履歴"
+                items={lengthHistory}
+                onSelect={setLength}
+                onDelete={(value) => setLengthHistory(removeHistory(HISTORY_KEYS.length, value))}
+              />
             </div>
           )}
-        </div>
 
-        {/* ===== note・X ===== */}
-        <div>
-          <button
-            type="button"
+          <SectionButton
+            title="note・X設定"
+            subtitle="決まり文・URL・挿入位置"
+            isOpen={openCommon}
             onClick={() => setOpenCommon(!openCommon)}
-            className="w-full flex justify-between items-center p-4 bg-indigo-100 rounded-2xl"
-          >
-            note・X設定
-            {openCommon ? <ChevronUpIcon className="w-5"/> : <ChevronDownIcon className="w-5"/>}
-          </button>
+            className="bg-indigo-100 border-indigo-200"
+          />
 
           {openCommon && (
-            <div className="p-4 space-y-4 bg-indigo-50 rounded-2xl mt-2">
-
+            <div className="p-4 space-y-4 bg-indigo-50 rounded-2xl border border-indigo-200">
               <input
                 value={templateText}
-                onChange={(e)=>setTemplateText(e.target.value)}
+                onChange={(e) => setTemplateText(e.target.value)}
                 className="w-full p-3 rounded-xl border"
+                placeholder="詳しくはこちら👇"
+              />
+              <HistoryChips
+                title="決まり文履歴"
+                items={templateTextHistory}
+                onSelect={setTemplateText}
+                onDelete={(value) => setTemplateTextHistory(removeHistory(HISTORY_KEYS.templateText, value))}
               />
 
               <input
                 value={templateUrl}
-                onChange={(e)=>setTemplateUrl(e.target.value)}
+                onChange={(e) => setTemplateUrl(e.target.value)}
                 placeholder="URL"
                 className="w-full p-3 rounded-xl border"
+              />
+              <HistoryChips
+                title="URL履歴"
+                items={templateUrlHistory}
+                onSelect={setTemplateUrl}
+                onDelete={(value) => setTemplateUrlHistory(removeHistory(HISTORY_KEYS.templateUrl, value))}
               />
 
               <select
                 value={insertPosition}
-                onChange={(e)=>setInsertPosition(e.target.value as any)}
+                onChange={(e) => setInsertPosition(e.target.value as 'start' | 'end')}
                 className="w-full p-3 rounded-xl border"
               >
                 <option value="start">最初</option>
                 <option value="end">最後</option>
               </select>
-
+              <HistoryChips
+                title="挿入位置履歴"
+                items={insertPositionHistory}
+                onSelect={(value) => setInsertPosition(value as 'start' | 'end')}
+                onDelete={(value) => setInsertPositionHistory(removeHistory(HISTORY_KEYS.insertPosition, value))}
+              />
             </div>
           )}
-        </div>
 
-        {/* ===== TikTok ===== */}
-        <div>
-          <button
-            type="button"
+          <SectionButton
+            title="TikTok設定"
+            subtitle="専用決まり文・挿入位置"
+            isOpen={openTiktok}
             onClick={() => setOpenTiktok(!openTiktok)}
-            className="w-full flex justify-between items-center p-4 bg-cyan-100 rounded-2xl"
-          >
-            TikTok設定
-            {openTiktok ? <ChevronUpIcon className="w-5"/> : <ChevronDownIcon className="w-5"/>}
-          </button>
+            className="bg-cyan-100 border-cyan-200"
+          />
 
           {openTiktok && (
-            <div className="p-4 space-y-4 bg-cyan-50 rounded-2xl mt-2">
-
+            <div className="p-4 space-y-4 bg-cyan-50 rounded-2xl border border-cyan-200">
               <input
                 value={tiktokTemplateText}
-                onChange={(e)=>setTiktokTemplateText(e.target.value)}
+                onChange={(e) => setTiktokTemplateText(e.target.value)}
                 className="w-full p-3 rounded-xl border"
+                placeholder="続きはプロフィールから👇"
+              />
+              <HistoryChips
+                title="TikTok決まり文履歴"
+                items={tiktokTemplateTextHistory}
+                onSelect={setTiktokTemplateText}
+                onDelete={(value) => setTiktokTemplateTextHistory(removeHistory(HISTORY_KEYS.tiktokTemplateText, value))}
               />
 
               <select
                 value={tiktokInsertPosition}
-                onChange={(e)=>setTiktokInsertPosition(e.target.value as any)}
+                onChange={(e) =>
+                  setTiktokInsertPosition(e.target.value as 'start' | 'end' | 'both')
+                }
                 className="w-full p-3 rounded-xl border"
               >
                 <option value="start">最初（おすすめ）</option>
                 <option value="end">最後</option>
                 <option value="both">最初＋最後</option>
               </select>
-
+              <HistoryChips
+                title="TikTok挿入位置履歴"
+                items={tiktokInsertPositionHistory}
+                onSelect={(value) => setTiktokInsertPosition(value as 'start' | 'end' | 'both')}
+                onDelete={(value) =>
+                  setTiktokInsertPositionHistory(removeHistory(HISTORY_KEYS.tiktokInsertPosition, value))
+                }
+              />
             </div>
           )}
         </div>
 
-        {/* ===== ボタン ===== */}
-        <button
-          type="submit"
-          disabled={!theme}
-          className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-bold flex justify-center items-center gap-2"
-        >
-          生成する
-          <PaperAirplaneIcon className="w-5"/>
-        </button>
+        <div className="space-y-6">
+          {!isLoading ? (
+            <button
+              type="submit"
+              disabled={!theme.trim()}
+              className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-bold flex justify-center items-center gap-2 disabled:opacity-50"
+            >
+              生成する
+              <PaperAirplaneIcon className="w-5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="relative flex-grow bg-slate-100 rounded-3xl p-1 h-[72px] overflow-hidden flex items-center border border-slate-200 shadow-inner">
+                <div
+                  className="absolute left-1 top-1 bottom-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl transition-all duration-300 ease-out"
+                  style={{ width: `calc(${progress}% - 8px)`, minWidth: '1%' }}
+                />
+                <div className="relative w-full flex items-center justify-center gap-3 font-black italic">
+                  <span className="text-2xl text-white drop-shadow-md tracking-tighter">
+                    {Math.round(progress)}%
+                  </span>
+                </div>
+              </div>
 
+              <button
+                type="button"
+                onClick={onCancel}
+                className="w-[72px] h-[72px] bg-red-500 text-white rounded-3xl flex items-center justify-center hover:bg-red-600 transition-all shadow-lg active:scale-95"
+              >
+                <XMarkIcon className="w-8 h-8" />
+              </button>
+            </div>
+          )}
+        </div>
       </form>
     </div>
   );
