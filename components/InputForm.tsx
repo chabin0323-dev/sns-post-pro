@@ -1,408 +1,590 @@
-import React from 'react';
-import type { GenerateInput, Platform, ThemeSuggestion, TemplateMode } from '../types';
+import React, { useMemo, useState } from 'react';
+import { LoadingState } from '../types';
+import {
+  SparklesIcon,
+  PaperAirplaneIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  XMarkIcon,
+  ClockIcon,
+  LightBulbIcon
+} from '@heroicons/react/24/solid';
 
 interface InputFormProps {
-  value: GenerateInput;
-  onChange: (next: GenerateInput) => void;
-  onGenerate: () => void;
-  themeSuggestions: ThemeSuggestion[];
-  premiumEnabled: boolean;
-  usageCount: number;
-  freeLimit: number;
+  onGenerate: (
+    theme: string,
+    length: string,
+    gender: string,
+    age: string,
+    templateText: string,
+    templateUrl: string,
+    tiktokTemplateText: string,
+    insertPosition: 'start' | 'end',
+    tiktokInsertPosition: 'start' | 'end' | 'both'
+  ) => void;
+  onCancel: () => void;
+  loadingState: LoadingState;
+  progress: number;
 }
 
-const cardStyle: React.CSSProperties = {
-  background: '#ffffff',
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
-  border: '1px solid #ececec',
+const MAX_HISTORY = 10;
+const ITEMS_PER_PAGE = 5;
+
+const LOCAL_KEYWORD_MAP: Record<string, string[]> = {
+  恋愛: ['片想い', '復縁', '告白', '脈あり', '本音', '恋愛心理', '忘れられない人', '距離感', '好き避け', '連絡頻度'],
+  美容: ['スキンケア', '毛穴', '乾燥対策', 'エイジングケア', '垢抜け', 'メイク時短', '美容習慣', '小顔', 'UV対策', '美肌'],
+  ダイエット: ['食事改善', '痩せ習慣', 'リバウンド', '代謝アップ', 'ながら運動', '脂肪燃焼', '腸活', 'むくみ改善', '間食対策', '朝活'],
+  副業: ['在宅ワーク', 'SNS集客', '初心者副業', '収益化', 'コンテンツ販売', '時短副業', 'AI活用', 'スキル販売', '継続力', '仕組み化'],
+  SNS: ['バズ投稿', '伸びる書き方', '保存される投稿', '投稿ネタ', 'フォロワー増加', 'リール戦略', '導線設計', 'プロフィール改善', '毎日投稿', '共感文章'],
+  仕事: ['人間関係', '評価される人', '習慣改善', '時間管理', 'モチベーション', '会話術', '信頼構築', 'キャリア', '転職不安', '成長戦略'],
+  健康: ['睡眠改善', '疲労回復', '自律神経', '腸内環境', '肩こり対策', 'ストレス解消', '朝習慣', '温活', '姿勢改善', '生活改善'],
 };
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 14,
-  fontWeight: 700,
-  marginBottom: 8,
-  color: '#222',
+const COMMON_KEYWORDS = [
+  '初心者向け',
+  '知らないと損',
+  '今すぐできる',
+  '習慣化',
+  'やってはいけない',
+  '続けるコツ',
+  '選ばれる方法',
+  '失敗しない考え方',
+  'おすすめの始め方',
+  '結果が変わるコツ',
+  '伸びる型',
+  '売れる導線',
+  '共感される書き方',
+  '保存したくなる内容',
+  '行動したくなる一言'
+];
+
+const readHistory = (key: string): string[] => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is string => typeof item === 'string' && item.trim() !== '');
+  } catch {
+    return [];
+  }
 };
 
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 14px',
-  borderRadius: 12,
-  border: '1px solid #d8d8d8',
-  fontSize: 14,
-  outline: 'none',
-  boxSizing: 'border-box',
+const writeHistory = (key: string, values: string[]) => {
+  localStorage.setItem(key, JSON.stringify(values.slice(0, MAX_HISTORY)));
 };
 
-const selectStyle: React.CSSProperties = {
-  ...inputStyle,
+const addHistory = (key: string, value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return readHistory(key);
+  const current = readHistory(key);
+  const next = [trimmed, ...current.filter((item) => item !== trimmed)].slice(0, MAX_HISTORY);
+  writeHistory(key, next);
+  return next;
 };
 
-const sectionTitleStyle: React.CSSProperties = {
-  fontSize: 18,
-  fontWeight: 800,
-  marginBottom: 14,
-  color: '#111',
+const removeHistory = (key: string, value: string) => {
+  const next = readHistory(key).filter((item) => item !== value);
+  writeHistory(key, next);
+  return next;
 };
 
-const platformButtonStyle = (active: boolean): React.CSSProperties => ({
-  padding: '10px 14px',
-  borderRadius: 999,
-  border: active ? '1px solid #111' : '1px solid #d8d8d8',
-  background: active ? '#111' : '#fff',
-  color: active ? '#fff' : '#111',
-  fontWeight: 700,
-  cursor: 'pointer',
-});
+const getRelatedKeywordsLocal = (theme: string): string[] => {
+  const trimmed = theme.trim();
+  if (!trimmed) return [];
 
-const chipStyle = (premium: boolean): React.CSSProperties => ({
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '8px 12px',
-  borderRadius: 999,
-  border: premium ? '1px solid #f0b429' : '1px solid #ddd',
-  background: premium ? '#fff8e7' : '#f8f8f8',
-  fontSize: 13,
-  cursor: 'pointer',
-  marginRight: 8,
-  marginBottom: 8,
-});
+  const matchedEntry = Object.entries(LOCAL_KEYWORD_MAP).find(([key]) =>
+    trimmed.includes(key)
+  );
 
-const checkboxRow: React.CSSProperties = {
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: 16,
-  marginTop: 10,
-};
-
-function updateField<K extends keyof GenerateInput>(
-  value: GenerateInput,
-  key: K,
-  nextValue: GenerateInput[K],
-  onChange: (next: GenerateInput) => void
-) {
-  onChange({
-    ...value,
-    [key]: nextValue,
-  });
-}
-
-export default function InputForm({
-  value,
-  onChange,
-  onGenerate,
-  themeSuggestions,
-  premiumEnabled,
-  usageCount,
-  freeLimit,
-}: InputFormProps) {
-  const platforms: Platform[] = [
-    'TikTok',
-    'Instagram Reels',
-    'Instagram Feed',
-    'X',
-    'note',
-    'YouTube Shorts',
+  const base = matchedEntry ? matchedEntry[1] : [];
+  const merged = [
+    ...base,
+    `${trimmed} 初心者`,
+    `${trimmed} コツ`,
+    `${trimmed} やり方`,
+    `${trimmed} テンプレ`,
+    `${trimmed} 失敗`,
+    `${trimmed} 改善`,
+    `${trimmed} 投稿例`,
+    ...COMMON_KEYWORDS
   ];
 
-  const templateModes: { label: string; value: TemplateMode }[] = [
-    { label: 'なし', value: 'none' },
-    { label: '最初だけ', value: 'start' },
-    { label: '最後だけ', value: 'end' },
-    { label: '両方', value: 'both' },
-  ];
+  return Array.from(new Set(merged)).slice(0, 15);
+};
 
-  const isVideoPlatform =
-    value.platform === 'TikTok' ||
-    value.platform === 'Instagram Reels' ||
-    value.platform === 'YouTube Shorts';
+const SectionButton: React.FC<{
+  title: string;
+  subtitle: string;
+  isOpen: boolean;
+  onClick: () => void;
+  className?: string;
+}> = ({ title, subtitle, isOpen, onClick, className = '' }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`w-full flex items-center justify-between rounded-2xl p-4 text-left border ${className}`}
+  >
+    <div>
+      <div className="font-black text-slate-800">{title}</div>
+      <div className="text-xs text-slate-500 mt-1">{subtitle}</div>
+    </div>
+    {isOpen ? (
+      <ChevronUpIcon className="w-5 h-5 text-slate-500" />
+    ) : (
+      <ChevronDownIcon className="w-5 h-5 text-slate-500" />
+    )}
+  </button>
+);
+
+const HistoryChips: React.FC<{
+  title: string;
+  items: string[];
+  onSelect: (value: string) => void;
+  onDelete: (value: string) => void;
+}> = ({ title, items, onSelect, onDelete }) => {
+  if (items.length === 0) return null;
 
   return (
-    <div style={{ display: 'grid', gap: 18 }}>
-      <div style={cardStyle}>
-        <div style={{ ...sectionTitleStyle, marginBottom: 10 }}>投稿設定</div>
-
-        <div style={{ marginBottom: 14 }}>
-          <div style={labelStyle}>媒体</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {platforms.map((platform) => (
-              <button
-                key={platform}
-                type="button"
-                onClick={() => updateField(value, 'platform', platform, onChange)}
-                style={platformButtonStyle(value.platform === platform)}
-              >
-                {platform}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>テーマ</label>
-          <input
-            style={inputStyle}
-            value={value.theme}
-            onChange={(e) => updateField(value, 'theme', e.target.value, onChange)}
-            placeholder="例：売れる導線の作り方"
-          />
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-          <div>
-            <label style={labelStyle}>トーン</label>
-            <input
-              style={inputStyle}
-              value={value.tone}
-              onChange={(e) => updateField(value, 'tone', e.target.value, onChange)}
-              placeholder="例：やさしい / 熱量高め"
-            />
-          </div>
-
-          <div>
-            <label style={labelStyle}>対象読者</label>
-            <input
-              style={inputStyle}
-              value={value.audience}
-              onChange={(e) => updateField(value, 'audience', e.target.value, onChange)}
-              placeholder="例：初心者 / 女性向け"
-            />
-          </div>
-        </div>
-
-        <div style={{ marginTop: 12 }}>
-          <label style={labelStyle}>目的</label>
-          <input
-            style={inputStyle}
-            value={value.purpose}
-            onChange={(e) => updateField(value, 'purpose', e.target.value, onChange)}
-            placeholder="例：保存されたい / 商品販売 / フォロワー増"
-          />
-        </div>
-
-        <div style={checkboxRow}>
-          <label style={{ fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={value.useEmoji}
-              onChange={(e) => updateField(value, 'useEmoji', e.target.checked, onChange)}
-              style={{ marginRight: 8 }}
-            />
-            絵文字を入れる
-          </label>
-
-          <label style={{ fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={value.includeHashtags}
-              onChange={(e) => updateField(value, 'includeHashtags', e.target.checked, onChange)}
-              style={{ marginRight: 8 }}
-            />
-            ハッシュタグ生成
-          </label>
-
-          <label style={{ fontSize: 14 }}>
-            <input
-              type="checkbox"
-              checked={value.includeCTA}
-              onChange={(e) => updateField(value, 'includeCTA', e.target.checked, onChange)}
-              style={{ marginRight: 8 }}
-            />
-            CTAを入れる
-          </label>
-        </div>
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 space-y-3">
+      <div className="flex items-center gap-2 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+        <ClockIcon className="w-3 h-3" />
+        {title}
       </div>
-
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>投稿テンプレ挿入</div>
-
-        <div style={{ marginBottom: 14 }}>
-          <label style={labelStyle}>挿入位置</label>
-          <select
-            style={selectStyle}
-            value={value.templateMode}
-            onChange={(e) =>
-              updateField(value, 'templateMode', e.target.value as TemplateMode, onChange)
-            }
-          >
-            {templateModes.map((item) => (
-              <option key={item.value} value={item.value}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={{ marginBottom: 12 }}>
-          <label style={labelStyle}>最初に入れる文章</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
-            value={value.templateStart}
-            onChange={(e) => updateField(value, 'templateStart', e.target.value, onChange)}
-            placeholder="例：投稿を見ていただきありがとうございます。"
-          />
-        </div>
-
-        <div>
-          <label style={labelStyle}>最後に入れる文章</label>
-          <textarea
-            style={{ ...inputStyle, minHeight: 80, resize: 'vertical' }}
-            value={value.templateEnd}
-            onChange={(e) => updateField(value, 'templateEnd', e.target.value, onChange)}
-            placeholder="例：気になる方はプロフィールからどうぞ。"
-          />
-        </div>
-      </div>
-
-      {isVideoPlatform && (
-        <div style={cardStyle}>
-          <div style={sectionTitleStyle}>動画系共通設定</div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>フックの強さ</label>
-              <select
-                style={selectStyle}
-                value={value.tiktokSettings.hookStyle}
-                onChange={(e) =>
-                  onChange({
-                    ...value,
-                    tiktokSettings: {
-                      ...value.tiktokSettings,
-                      hookStyle: e.target.value as 'strong' | 'soft' | 'emotional',
-                    },
-                  })
-                }
-              >
-                <option value="strong">強め</option>
-                <option value="soft">やさしめ</option>
-                <option value="emotional">感情系</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={labelStyle}>動画尺</label>
-              <select
-                style={selectStyle}
-                value={value.tiktokSettings.duration}
-                onChange={(e) =>
-                  onChange({
-                    ...value,
-                    tiktokSettings: {
-                      ...value.tiktokSettings,
-                      duration: e.target.value as '15秒' | '30秒' | '60秒',
-                    },
-                  })
-                }
-              >
-                <option value="15秒">15秒</option>
-                <option value="30秒">30秒</option>
-                <option value="60秒">60秒</option>
-              </select>
-            </div>
-          </div>
-
-          <label style={{ fontSize: 14, display: 'block', marginTop: 12 }}>
-            <input
-              type="checkbox"
-              checked={value.tiktokSettings.includeCaptionIdea}
-              onChange={(e) =>
-                onChange({
-                  ...value,
-                  tiktokSettings: {
-                    ...value.tiktokSettings,
-                    includeCaptionIdea: e.target.checked,
-                  },
-                })
-              }
-              style={{ marginRight: 8 }}
-            />
-            キャプション案も含める
-          </label>
-
+      <div className="flex flex-wrap gap-2">
+        {items.map((item, index) => (
           <div
-            style={{
-              marginTop: 12,
-              padding: 12,
-              borderRadius: 12,
-              background: '#f8f8f8',
-              border: '1px solid #ececec',
-              fontSize: 13,
-              color: '#555',
-              lineHeight: 1.7,
-            }}
+            key={`${item}-${index}`}
+            className="flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 max-w-full"
           >
-            TikTok / Instagram Reels / YouTube Shorts は共通ロジックで生成されます。
+            <button
+              type="button"
+              onClick={() => onSelect(item)}
+              className="text-sm font-bold text-slate-700 hover:text-indigo-600 break-all text-left"
+            >
+              {item}
+            </button>
+            <button
+              type="button"
+              onClick={() => onDelete(item)}
+              className="shrink-0 text-slate-400 hover:text-red-500"
+              aria-label={`${title}を削除`}
+            >
+              <XMarkIcon className="w-4 h-4" />
+            </button>
           </div>
-        </div>
-      )}
-
-      <div style={cardStyle}>
-        <div style={sectionTitleStyle}>テーマ提案</div>
-        <div>
-          {themeSuggestions.map((item) => {
-            const locked = !!item.premium && !premiumEnabled;
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  if (locked) return;
-                  updateField(value, 'theme', item.label, onChange);
-                }}
-                style={{
-                  ...chipStyle(!!item.premium),
-                  opacity: locked ? 0.6 : 1,
-                  cursor: locked ? 'not-allowed' : 'pointer',
-                }}
-                title={locked ? '有料版で使えるテーマです' : item.label}
-              >
-                <span>{item.label}</span>
-                {item.premium && <span>{locked ? '🔒' : '⭐'}</span>}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div
-        style={{
-          ...cardStyle,
-          background: 'linear-gradient(135deg, #111, #2d2d2d)',
-          color: '#fff',
-        }}
-      >
-        <div style={{ fontSize: 22, fontWeight: 900, marginBottom: 8 }}>
-          SNS投稿を生成する
-        </div>
-
-        <div style={{ fontSize: 14, opacity: 0.9, marginBottom: 16 }}>
-          無料版使用回数：{usageCount} / {freeLimit}
-        </div>
-
-        <button
-          type="button"
-          onClick={onGenerate}
-          style={{
-            width: '100%',
-            padding: '15px 18px',
-            borderRadius: 14,
-            border: 'none',
-            background: '#fff',
-            color: '#111',
-            fontSize: 16,
-            fontWeight: 800,
-            cursor: 'pointer',
-          }}
-        >
-          投稿文を生成する
-        </button>
+        ))}
       </div>
     </div>
   );
-}
+};
+
+export const InputForm: React.FC<InputFormProps> = ({
+  onGenerate,
+  onCancel,
+  loadingState,
+  progress
+}) => {
+  const isLoading = loadingState === LoadingState.LOADING;
+
+  const [theme, setTheme] = useState('');
+  const [gender, setGender] = useState('男性');
+  const [age, setAge] = useState('30代');
+  const [length, setLength] = useState('300文字');
+
+  const [templateText, setTemplateText] = useState('詳しくはこちら👇');
+  const [templateUrl, setTemplateUrl] = useState('');
+  const [tiktokTemplateText, setTiktokTemplateText] = useState('続きはプロフィールから👇');
+
+  const [insertPosition, setInsertPosition] = useState<'start' | 'end'>('end');
+  const [tiktokInsertPosition, setTiktokInsertPosition] = useState<'start' | 'end' | 'both'>('start');
+
+  const [openBasic, setOpenBasic] = useState(false);
+  const [openCommon, setOpenCommon] = useState(false);
+  const [openTiktok, setOpenTiktok] = useState(false);
+  const [showThemeHistory, setShowThemeHistory] = useState(false);
+
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [suggestionPage, setSuggestionPage] = useState(0);
+  const [isSuggesting, setIsSuggesting] = useState(false);
+
+  const HISTORY_KEYS = useMemo(
+    () => ({
+      theme: 'history_theme',
+      gender: 'history_gender',
+      age: 'history_age',
+      length: 'history_length',
+      templateText: 'history_template_text',
+      templateUrl: 'history_template_url',
+      tiktokTemplateText: 'history_tiktok_template_text',
+      insertPosition: 'history_insert_position',
+      tiktokInsertPosition: 'history_tiktok_insert_position'
+    }),
+    []
+  );
+
+  const [themeHistory, setThemeHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.theme));
+  const [genderHistory, setGenderHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.gender));
+  const [ageHistory, setAgeHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.age));
+  const [lengthHistory, setLengthHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.length));
+  const [templateTextHistory, setTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.templateText));
+  const [templateUrlHistory, setTemplateUrlHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.templateUrl));
+  const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokTemplateText));
+  const [insertPositionHistory, setInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.insertPosition));
+  const [tiktokInsertPositionHistory, setTiktokInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokInsertPosition));
+
+  const saveAllHistories = () => {
+    setThemeHistory(addHistory(HISTORY_KEYS.theme, theme));
+    setGenderHistory(addHistory(HISTORY_KEYS.gender, gender));
+    setAgeHistory(addHistory(HISTORY_KEYS.age, age));
+    setLengthHistory(addHistory(HISTORY_KEYS.length, length));
+    setTemplateTextHistory(addHistory(HISTORY_KEYS.templateText, templateText));
+    setTemplateUrlHistory(addHistory(HISTORY_KEYS.templateUrl, templateUrl));
+    setTiktokTemplateTextHistory(addHistory(HISTORY_KEYS.tiktokTemplateText, tiktokTemplateText));
+    setInsertPositionHistory(addHistory(HISTORY_KEYS.insertPosition, insertPosition));
+    setTiktokInsertPositionHistory(addHistory(HISTORY_KEYS.tiktokInsertPosition, tiktokInsertPosition));
+  };
+
+  const handleSuggest = async () => {
+    if (!theme.trim()) return;
+    setIsSuggesting(true);
+    setSuggestionPage(0);
+
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      const keywords = getRelatedKeywordsLocal(theme);
+      setSuggestions(keywords);
+      setShowThemeHistory(false);
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
+  const handleSelectSuggestion = (value: string) => {
+    setTheme(value);
+    setSuggestions([]);
+  };
+
+  const nextSuggestionPage = () => {
+    if ((suggestionPage + 1) * ITEMS_PER_PAGE < suggestions.length) {
+      setSuggestionPage(suggestionPage + 1);
+    } else {
+      setSuggestionPage(0);
+    }
+  };
+
+  const prevSuggestionPage = () => {
+    if (suggestionPage > 0) {
+      setSuggestionPage(suggestionPage - 1);
+    } else {
+      setSuggestionPage(Math.floor((suggestions.length - 1) / ITEMS_PER_PAGE));
+    }
+  };
+
+  const currentSuggestions = suggestions.slice(
+    suggestionPage * ITEMS_PER_PAGE,
+    (suggestionPage + 1) * ITEMS_PER_PAGE
+  );
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!theme.trim()) return;
+
+    saveAllHistories();
+
+    onGenerate(
+      theme,
+      length,
+      gender,
+      age,
+      templateText,
+      templateUrl,
+      tiktokTemplateText,
+      insertPosition,
+      tiktokInsertPosition
+    );
+  };
+
+  return (
+    <div className="w-full bg-white rounded-[40px] shadow-2xl p-6 md:p-10">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-3xl font-black">SNS投稿を一瞬で作成</h2>
+          <p className="text-sm text-gray-500">テーマを入れるだけで投稿完成</p>
+        </div>
+
+        <div className="bg-indigo-50 p-6 rounded-3xl space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <label className="font-bold text-slate-800">投稿テーマ</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleSuggest}
+                disabled={!theme.trim() || isSuggesting}
+                className={`text-xs font-black ${theme.trim() ? 'text-indigo-600' : 'text-slate-300'}`}
+              >
+                {isSuggesting ? '...' : '提案'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowThemeHistory(!showThemeHistory);
+                  setSuggestions([]);
+                }}
+                className="text-xs font-black text-indigo-600"
+              >
+                履歴
+              </button>
+            </div>
+          </div>
+
+          <div className="relative">
+            <SparklesIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
+            <input
+              value={theme}
+              onChange={(e) => setTheme(e.target.value)}
+              placeholder="例：恋愛、副業、ダイエット"
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border outline-none"
+              disabled={isLoading}
+            />
+          </div>
+
+          {showThemeHistory && (
+            <HistoryChips
+              title="テーマ履歴"
+              items={themeHistory}
+              onSelect={setTheme}
+              onDelete={(value) => setThemeHistory(removeHistory(HISTORY_KEYS.theme, value))}
+            />
+          )}
+
+          {suggestions.length > 0 && (
+            <div className="rounded-2xl border border-indigo-100 bg-white p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-[11px] font-black text-indigo-500 uppercase tracking-wider">
+                  <LightBulbIcon className="w-3 h-3" />
+                  おすすめテーマ
+                </div>
+                <div className="flex items-center gap-3 text-xs font-black text-slate-500">
+                  <button type="button" onClick={prevSuggestionPage}>戻る</button>
+                  <span>|</span>
+                  <button type="button" onClick={nextSuggestionPage}>次</button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {currentSuggestions.map((item, index) => (
+                  <button
+                    key={`${item}-${index}`}
+                    type="button"
+                    onClick={() => handleSelectSuggestion(item)}
+                    className="px-4 py-2 rounded-full bg-indigo-50 border border-indigo-100 text-sm font-bold text-indigo-600"
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <SectionButton
+            title="投稿設定"
+            subtitle="性別・年代・文字数"
+            isOpen={openBasic}
+            onClick={() => setOpenBasic(!openBasic)}
+            className="bg-gray-100 border-gray-200"
+          />
+
+          {openBasic && (
+            <div className="p-4 space-y-4 bg-gray-50 rounded-2xl border border-gray-200">
+              <select
+                value={gender}
+                onChange={(e) => setGender(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              >
+                <option>男性</option>
+                <option>女性</option>
+                <option>指定なし</option>
+              </select>
+              <HistoryChips
+                title="性別履歴"
+                items={genderHistory}
+                onSelect={setGender}
+                onDelete={(value) => setGenderHistory(removeHistory(HISTORY_KEYS.gender, value))}
+              />
+
+              <select
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              >
+                <option>20代</option>
+                <option>30代</option>
+                <option>40代</option>
+                <option>50代以上</option>
+                <option>指定なし</option>
+              </select>
+              <HistoryChips
+                title="年代履歴"
+                items={ageHistory}
+                onSelect={setAge}
+                onDelete={(value) => setAgeHistory(removeHistory(HISTORY_KEYS.age, value))}
+              />
+
+              <select
+                value={length}
+                onChange={(e) => setLength(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              >
+                <option>200文字</option>
+                <option>300文字</option>
+                <option>500文字</option>
+              </select>
+              <HistoryChips
+                title="文字数履歴"
+                items={lengthHistory}
+                onSelect={setLength}
+                onDelete={(value) => setLengthHistory(removeHistory(HISTORY_KEYS.length, value))}
+              />
+            </div>
+          )}
+
+          <SectionButton
+            title="note・X設定"
+            subtitle="決まり文・URL・挿入位置"
+            isOpen={openCommon}
+            onClick={() => setOpenCommon(!openCommon)}
+            className="bg-indigo-100 border-indigo-200"
+          />
+
+          {openCommon && (
+            <div className="p-4 space-y-4 bg-indigo-50 rounded-2xl border border-indigo-200">
+              <input
+                value={templateText}
+                onChange={(e) => setTemplateText(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+                placeholder="詳しくはこちら👇"
+              />
+              <HistoryChips
+                title="決まり文履歴"
+                items={templateTextHistory}
+                onSelect={setTemplateText}
+                onDelete={(value) => setTemplateTextHistory(removeHistory(HISTORY_KEYS.templateText, value))}
+              />
+
+              <input
+                value={templateUrl}
+                onChange={(e) => setTemplateUrl(e.target.value)}
+                placeholder="URL"
+                className="w-full p-3 rounded-xl border"
+              />
+              <HistoryChips
+                title="URL履歴"
+                items={templateUrlHistory}
+                onSelect={setTemplateUrl}
+                onDelete={(value) => setTemplateUrlHistory(removeHistory(HISTORY_KEYS.templateUrl, value))}
+              />
+
+              <select
+                value={insertPosition}
+                onChange={(e) => setInsertPosition(e.target.value as 'start' | 'end')}
+                className="w-full p-3 rounded-xl border"
+              >
+                <option value="start">最初</option>
+                <option value="end">最後</option>
+              </select>
+              <HistoryChips
+                title="挿入位置履歴"
+                items={insertPositionHistory}
+                onSelect={(value) => setInsertPosition(value as 'start' | 'end')}
+                onDelete={(value) => setInsertPositionHistory(removeHistory(HISTORY_KEYS.insertPosition, value))}
+              />
+            </div>
+          )}
+
+          <SectionButton
+            title="TikTok設定"
+            subtitle="専用決まり文・挿入位置"
+            isOpen={openTiktok}
+            onClick={() => setOpenTiktok(!openTiktok)}
+            className="bg-cyan-100 border-cyan-200"
+          />
+
+          {openTiktok && (
+            <div className="p-4 space-y-4 bg-cyan-50 rounded-2xl border border-cyan-200">
+              <input
+                value={tiktokTemplateText}
+                onChange={(e) => setTiktokTemplateText(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+                placeholder="続きはプロフィールから👇"
+              />
+              <HistoryChips
+                title="TikTok決まり文履歴"
+                items={tiktokTemplateTextHistory}
+                onSelect={setTiktokTemplateText}
+                onDelete={(value) => setTiktokTemplateTextHistory(removeHistory(HISTORY_KEYS.tiktokTemplateText, value))}
+              />
+
+              <select
+                value={tiktokInsertPosition}
+                onChange={(e) =>
+                  setTiktokInsertPosition(e.target.value as 'start' | 'end' | 'both')
+                }
+                className="w-full p-3 rounded-xl border"
+              >
+                <option value="start">最初（おすすめ）</option>
+                <option value="end">最後</option>
+                <option value="both">最初＋最後</option>
+              </select>
+              <HistoryChips
+                title="TikTok挿入位置履歴"
+                items={tiktokInsertPositionHistory}
+                onSelect={(value) => setTiktokInsertPosition(value as 'start' | 'end' | 'both')}
+                onDelete={(value) =>
+                  setTiktokInsertPositionHistory(removeHistory(HISTORY_KEYS.tiktokInsertPosition, value))
+                }
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          {!isLoading ? (
+            <button
+              type="submit"
+              disabled={!theme.trim()}
+              className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-bold flex justify-center items-center gap-2 disabled:opacity-50"
+            >
+              生成する
+              <PaperAirplaneIcon className="w-5" />
+            </button>
+          ) : (
+            <div className="flex items-center gap-4">
+              <div className="relative flex-grow bg-slate-100 rounded-3xl p-1 h-[72px] overflow-hidden flex items-center border border-slate-200 shadow-inner">
+                <div
+                  className="absolute left-1 top-1 bottom-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl transition-all duration-300 ease-out"
+                  style={{ width: `calc(${progress}% - 8px)`, minWidth: '1%' }}
+                />
+                <div className="relative w-full flex items-center justify-center gap-3 font-black italic">
+                  <span className="text-2xl text-white drop-shadow-md tracking-tighter">
+                    {Math.round(progress)}%
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={onCancel}
+                className="w-[72px] h-[72px] bg-red-500 text-white rounded-3xl flex items-center justify-center hover:bg-red-600 transition-all shadow-lg active:scale-95"
+              >
+                <XMarkIcon className="w-8 h-8" />
+              </button>
+            </div>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+};
