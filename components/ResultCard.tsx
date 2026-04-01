@@ -1,152 +1,253 @@
-import React, { useState } from 'react';
-import {
-  ClipboardDocumentIcon,
-  CheckIcon
-} from '@heroicons/react/24/outline';
+import React from 'react';
+import type { GeneratedPost } from '../types';
 
-type ResultPost = {
-  title?: string;
-  content: string;
-  capcutScript: string;
-  xPost: string;
-  instagramPost: string;
-  youtubePost: string;
-  hashtags?: string[];
+interface ResultCardProps {
+  post: GeneratedPost | null;
+  premiumEnabled: boolean;
+  onUpgradeClick: () => void;
+}
+
+const cardStyle: React.CSSProperties = {
+  background: '#fff',
+  borderRadius: 20,
+  padding: 20,
+  boxShadow: '0 10px 30px rgba(0,0,0,0.08)',
+  border: '1px solid #ececec',
 };
 
-type ChannelBlock = {
-  labels: string[];
-  text: string;
-  theme: 'light' | 'dark' | 'sky' | 'pink' | 'red';
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 800,
+  marginBottom: 14,
+  color: '#111',
 };
 
-const normalizeText = (text: string) => text.trim();
-
-const groupChannels = (post: ResultPost): ChannelBlock[] => {
-  const source = [
-    { label: 'note', text: post.content, theme: 'light' as const },
-    { label: 'TikTok', text: post.capcutScript, theme: 'dark' as const },
-    { label: 'X', text: post.xPost, theme: 'sky' as const },
-    { label: 'Instagram', text: post.instagramPost, theme: 'pink' as const },
-    { label: 'YouTube', text: post.youtubePost, theme: 'red' as const }
-  ];
-
-  const grouped = new Map<string, ChannelBlock>();
-
-  source.forEach((item) => {
-    const key = normalizeText(item.text);
-    if (grouped.has(key)) {
-      grouped.get(key)!.labels.push(item.label);
-    } else {
-      grouped.set(key, {
-        labels: [item.label],
-        text: item.text,
-        theme: item.theme
-      });
-    }
-  });
-
-  return Array.from(grouped.values());
+const outputBoxStyle: React.CSSProperties = {
+  background: '#fafafa',
+  border: '1px solid #e7e7e7',
+  borderRadius: 14,
+  padding: 14,
+  whiteSpace: 'pre-wrap',
+  lineHeight: 1.7,
+  fontSize: 14,
 };
 
-const themeClassMap = {
-  light: {
-    wrap: 'bg-white border-slate-100',
-    badge: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-    text: 'text-slate-700 bg-slate-50/40 border-slate-100',
-    button: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
-  },
-  dark: {
-    wrap: 'bg-slate-900 border-slate-800',
-    badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/20',
-    text: 'text-cyan-50 bg-slate-950/50 border-slate-800',
-    button: 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
-  },
-  sky: {
-    wrap: 'bg-sky-50 border-sky-100',
-    badge: 'bg-white text-sky-600 border-sky-100',
-    text: 'text-slate-700 bg-white/70 border-sky-100',
-    button: 'bg-sky-500 hover:bg-sky-600 text-white shadow-sky-200'
-  },
-  pink: {
-    wrap: 'bg-pink-50 border-pink-100',
-    badge: 'bg-white text-pink-600 border-pink-100',
-    text: 'text-slate-700 bg-white/70 border-pink-100',
-    button: 'bg-pink-500 hover:bg-pink-600 text-white shadow-pink-200'
-  },
-  red: {
-    wrap: 'bg-red-50 border-red-100',
-    badge: 'bg-white text-red-600 border-red-100',
-    text: 'text-slate-700 bg-white/70 border-red-100',
-    button: 'bg-red-500 hover:bg-red-600 text-white shadow-red-200'
+function copyText(text: string) {
+  navigator.clipboard.writeText(text);
+  alert('コピーしました');
+}
+
+export default function ResultCard({
+  post,
+  premiumEnabled,
+  onUpgradeClick,
+}: ResultCardProps) {
+  if (!post) {
+    return (
+      <div style={cardStyle}>
+        <div style={sectionTitleStyle}>生成結果</div>
+        <div style={{ color: '#666', lineHeight: 1.8 }}>
+          ここに投稿文が表示されます。
+          <br />
+          左側でテーマや媒体を選んで、投稿文を生成してください。
+        </div>
+      </div>
+    );
   }
-};
 
-export const ResultCard: React.FC<{ post: ResultPost }> = ({ post }) => {
-  const [copiedKey, setCopiedKey] = useState('');
-  const groupedBlocks = groupChannels(post);
-
-  const handleCopy = async (text: string, key: string) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedKey(key);
-      setTimeout(() => setCopiedKey(''), 2000);
-    } catch (err) {
-      console.error('Copy failed', err);
-    }
-  };
+  const showPremiumArea = premiumEnabled || post.isPremiumGenerated;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-20">
-      {groupedBlocks.map((block, index) => {
-        const themeClasses = themeClassMap[block.theme];
-        const copyKey = `${block.labels.join('-')}-${index}`;
+    <div style={{ display: 'grid', gap: 18 }}>
+      <div style={cardStyle}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div style={sectionTitleStyle}>生成結果</div>
+            <div style={{ fontSize: 12, color: '#666' }}>
+              {post.platform} / {new Date(post.createdAt).toLocaleString()}
+            </div>
+          </div>
 
-        return (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              onClick={() => copyText(`${post.title}\n\n${post.content}`)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 12,
+                border: '1px solid #ddd',
+                background: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              本文をコピー
+            </button>
+
+            <button
+              type="button"
+              onClick={() => copyText(post.hashtags.join(' '))}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 12,
+                border: '1px solid #ddd',
+                background: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              ハッシュタグをコピー
+            </button>
+          </div>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: '#444' }}>タイトル</div>
+          <div style={outputBoxStyle}>{post.title}</div>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: '#444' }}>本文</div>
+          <div style={outputBoxStyle}>{post.content}</div>
+        </div>
+
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8, color: '#444' }}>ハッシュタグ</div>
+          <div style={outputBoxStyle}>{post.hashtags.length ? post.hashtags.join(' ') : 'なし'}</div>
+        </div>
+      </div>
+
+      <div style={cardStyle}>
+        <div style={sectionTitleStyle}>販売向けの強化エリア</div>
+
+        {!showPremiumArea ? (
           <div
-            key={copyKey}
-            className={`rounded-[40px] shadow-2xl overflow-hidden border ${themeClasses.wrap}`}
+            style={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 16,
+              border: '1px solid #f1d28a',
+              background: 'linear-gradient(135deg, #fff8e7, #fffdf7)',
+              padding: 18,
+            }}
           >
-            <div className="p-8 md:p-10">
-              <div className="flex flex-wrap gap-2 mb-8">
-                <span
-                  className={`text-[10px] font-black px-3 py-1.5 rounded-full border uppercase tracking-wider ${themeClasses.badge}`}
-                >
-                  {block.labels.join('・')}
-                </span>
-                {block.labels.length > 1 && (
-                  <span className="text-[10px] font-black px-3 py-1.5 rounded-full border uppercase tracking-wider bg-emerald-50 text-emerald-600 border-emerald-100">
-                    共通
-                  </span>
-                )}
-              </div>
+            <div style={{ fontSize: 18, fontWeight: 900, marginBottom: 8 }}>
+              🔒 この先は有料版で解放
+            </div>
 
-              <div
-                className={`whitespace-pre-wrap leading-relaxed text-lg mb-10 font-medium rounded-3xl border p-6 ${themeClasses.text}`}
-              >
-                {block.text}
-              </div>
+            <div style={{ color: '#5d4a1f', lineHeight: 1.8, marginBottom: 16 }}>
+              有料版では次が使えます。
+              <br />
+              ・売れる導線テンプレ
+              <br />
+              ・高反応CTA案
+              <br />
+              ・販売用の訴求文セット
+              <br />
+              ・TikTok/YouTube強化構成
+              <br />
+              ・高単価向けテーマ提案
+            </div>
 
+            <div
+              style={{
+                filter: 'blur(3px)',
+                opacity: 0.8,
+                background: '#fff',
+                borderRadius: 14,
+                border: '1px solid #eee',
+                padding: 14,
+                marginBottom: 16,
+                userSelect: 'none',
+              }}
+            >
+              【限定】購入率を高める本文テンプレ
+              {'\n'}1. 共感
+              {'\n'}2. 悩みの明確化
+              {'\n'}3. 解決策
+              {'\n'}4. 実績・信頼
+              {'\n'}5. CTA
+            </div>
+
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                borderRadius: 14,
+                border: 'none',
+                background: '#111',
+                color: '#fff',
+                fontWeight: 800,
+                cursor: 'pointer',
+                fontSize: 15,
+              }}
+            >
+              有料版を確認する
+            </button>
+          </div>
+        ) : (
+          <div>
+            <div style={{ marginBottom: 12, color: '#444', lineHeight: 1.8 }}>
+              有料版向けの販売補助テンプレです。
+            </div>
+
+            <div style={outputBoxStyle}>
+              【売れる導線テンプレ】
+              {'\n\n'}1. 読者の悩みを1文で提示する
+              {'\n'}2. 放置するデメリットを入れる
+              {'\n'}3. 解決できる理由を具体的に書く
+              {'\n'}4. 商品・サービスの価値を短く伝える
+              {'\n'}5. 「今見る理由」を最後に入れる
+            </div>
+
+            <div style={{ marginTop: 16 }}>
               <button
-                onClick={() => handleCopy(block.text, copyKey)}
-                className={`w-full py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-[0.98] shadow-lg ${themeClasses.button}`}
+                type="button"
+                onClick={() =>
+                  copyText(
+                    `【売れる導線テンプレ】\n\n1. 読者の悩みを1文で提示する\n2. 放置するデメリットを入れる\n3. 解決できる理由を具体的に書く\n4. 商品・サービスの価値を短く伝える\n5. 「今見る理由」を最後に入れる`
+                  )
+                }
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: 12,
+                  border: '1px solid #ddd',
+                  background: '#fff',
+                  cursor: 'pointer',
+                  fontWeight: 700,
+                }}
               >
-                {copiedKey === copyKey ? (
-                  <>
-                    <CheckIcon className="w-6 h-6" />
-                    コピー完了！
-                  </>
-                ) : (
-                  <>
-                    <ClipboardDocumentIcon className="w-6 h-6" />
-                    {block.labels.join('・')}としてコピー
-                  </>
-                )}
+                販売テンプレをコピー
               </button>
             </div>
           </div>
-        );
-      })}
+        )}
+      </div>
+
+      {post.capcutScript && (
+        <div style={cardStyle}>
+          <div style={sectionTitleStyle}>動画構成</div>
+          <div style={outputBoxStyle}>{post.capcutScript}</div>
+          <div style={{ marginTop: 12 }}>
+            <button
+              type="button"
+              onClick={() => copyText(post.capcutScript)}
+              style={{
+                padding: '10px 14px',
+                borderRadius: 12,
+                border: '1px solid #ddd',
+                background: '#fff',
+                cursor: 'pointer',
+                fontWeight: 700,
+              }}
+            >
+              構成をコピー
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
