@@ -1,5 +1,3 @@
-// types.ts
-
 export enum LoadingState {
   IDLE = 'IDLE',
   LOADING = 'LOADING',
@@ -13,6 +11,8 @@ export interface GeneratedPost {
   hashtags: string[];
   capcutScript: string;
   xPost: string;
+  instagramPost: string;
+  youtubePost: string;
   theme?: string;
   timestamp?: Date;
 }
