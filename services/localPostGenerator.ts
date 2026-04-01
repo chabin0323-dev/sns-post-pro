@@ -196,8 +196,46 @@ ${theme}の結果は変わります
 才能より、まず伝え方。
 ここを整えるだけで反応はかなり変わります。`;
 
+  const instagramBase = `${hook}
+
+${theme}で結果を変えたいなら、
+最初に整えるべきなのは「順番」です。
+
+・目的をはっきりさせる
+・相手に伝わる形にする
+・続けられる形に変える
+
+この3つを意識するだけで、
+伝わり方も反応も大きく変わります。
+
+がんばり方を増やすより、
+まずは伝わる形を整えること。
+
+${hashtags.join(' ')}`;
+
+  const youtubeBase = `${hook}
+
+${theme}で結果が変わる人には共通点があります。
+
+それは、努力量ではなく
+「順番」を整えていることです。
+
+今回のポイントは3つです。
+
+1. 目的をはっきりさせる
+2. 相手に伝わる形にする
+3. 続けられる形に変える
+
+この順番を意識するだけで、
+発信の反応も結果も大きく変わります。
+
+まずは今日、
+1つだけでも見直してみてください。`;
+
   const noteBlock = buildTemplateBlock(templateText, templateUrl);
   const xBlock = buildTemplateBlock(templateText, templateUrl);
+  const instagramBlock = buildTemplateBlock(templateText, templateUrl);
+  const youtubeBlock = buildTemplateBlock(templateText, templateUrl);
   const tiktokBlock = buildTextOnlyTemplateBlock(tiktokTemplateText);
 
   return {
@@ -209,6 +247,8 @@ ${theme}の結果は変わります
       tiktokInsertPosition
     ),
     xPost: insertBlock(xBase, xBlock, insertPosition),
+    instagramPost: insertBlock(instagramBase, instagramBlock, insertPosition),
+    youtubePost: insertBlock(youtubeBase, youtubeBlock, insertPosition),
     hashtags,
   };
 };
