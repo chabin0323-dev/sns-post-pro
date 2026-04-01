@@ -8,10 +8,38 @@ import { generateSNSPostContent } from './services/localPostGenerator';
 
 const STORAGE_KEY = 'latest_generated_post';
 
+const isValidSavedPost = (data: any): data is GeneratedPost => {
+  return (
+    data &&
+    typeof data === 'object' &&
+    typeof data.title === 'string' &&
+    typeof data.content === 'string' &&
+    typeof data.capcutScript === 'string' &&
+    typeof data.xPost === 'string' &&
+    typeof data.instagramPost === 'string' &&
+    typeof data.youtubePost === 'string' &&
+    Array.isArray(data.hashtags)
+  );
+};
+
 const App: React.FC = () => {
   const [currentPost, setCurrentPost] = useState<GeneratedPost | null>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) return null;
+
+      const parsed = JSON.parse(saved);
+
+      if (isValidSavedPost(parsed)) {
+        return parsed;
+      }
+
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    } catch {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
   });
 
   const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
