@@ -52,6 +52,12 @@ const insertBlockAdvanced = (
   return `${block}\n\n${baseText}\n\n${block}`;
 };
 
+const trimByLength = (text: string, length: string) => {
+  const max = length === '200文字' ? 220 : length === '500文字' ? 560 : 360;
+  if (text.length <= max) return text;
+  return `${text.slice(0, max)}...`;
+};
+
 export const generateSNSPostContent = (
   theme: string,
   length: string,
@@ -67,7 +73,7 @@ export const generateSNSPostContent = (
   const hashtags = getHashtags(theme);
   const hook = `【${theme}で結果が変わる人の共通点】`;
 
-  const noteBase = `${hook}
+  const noteBase = trimByLength(`${hook}
 
 「${theme}を頑張っているのに、思うように結果が出ない」
 そんなふうに感じたことはありませんか？
@@ -118,7 +124,7 @@ ${theme}で結果を変える人は、
 まずは1回、
 伝え方の順番を整えることから始めてみてください。
 
-${hashtags.join(' ')}`;
+${hashtags.join(' ')}`, length);
 
   const tiktokBase = `${hook}
 
@@ -186,7 +192,7 @@ ${theme}の結果は変わります
 まず1回
 整えてみてください`;
 
-  const xBase = `${theme}で結果が出ない人ほど、努力不足ではなく「順番」で損しています。
+  const xBase = trimByLength(`${theme}で結果が出ない人ほど、努力不足ではなく「順番」で損しています。
 
 大事なのは
 ・目的をはっきりさせる
@@ -194,9 +200,9 @@ ${theme}の結果は変わります
 ・続けられる形に変える
 
 才能より、まず伝え方。
-ここを整えるだけで反応はかなり変わります。`;
+ここを整えるだけで反応はかなり変わります。`, length);
 
-  const instagramBase = `${hook}
+  const instagramBase = trimByLength(`${hook}
 
 ${theme}で結果を変えたいなら、
 最初に整えるべきなのは「順番」です。
@@ -211,9 +217,9 @@ ${theme}で結果を変えたいなら、
 がんばり方を増やすより、
 まずは伝わる形を整えること。
 
-${hashtags.join(' ')}`;
+${hashtags.join(' ')}`, length);
 
-  const youtubeBase = `${hook}
+  const youtubeBase = trimByLength(`${hook}
 
 ${theme}で結果が変わる人には共通点があります。
 
@@ -230,7 +236,7 @@ ${theme}で結果が変わる人には共通点があります。
 発信の反応も結果も大きく変わります。
 
 まずは今日、
-1つだけでも見直してみてください。`;
+1つだけでも見直してみてください。`, length);
 
   const noteBlock = buildTemplateBlock(templateText, templateUrl);
   const xBlock = buildTemplateBlock(templateText, templateUrl);
