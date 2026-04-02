@@ -313,7 +313,7 @@ export const InputForm: React.FC<InputFormProps> = ({
           <p className="text-sm text-gray-500">テーマを入れるだけで投稿完成</p>
         </div>
 
-        <div className="bg-indigo-50 p-6 rounded-3xl space-y-4">
+        <div className="bg-gradient-to-br from-indigo-50 via-pink-50 to-cyan-50 p-6 rounded-3xl space-y-4 border border-indigo-100">
           <div className="flex items-center justify-between gap-3">
             <label className="font-bold text-slate-800">投稿テーマ</label>
             <div className="flex items-center gap-3">
@@ -344,7 +344,7 @@ export const InputForm: React.FC<InputFormProps> = ({
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
               placeholder="例：恋愛、副業、ダイエット"
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border outline-none"
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border outline-none border-indigo-200 focus:border-indigo-400"
               disabled={isLoading}
             />
           </div>
