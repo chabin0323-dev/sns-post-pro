@@ -3,7 +3,8 @@ import {
   ClipboardDocumentIcon,
   CheckIcon
 } from '@heroicons/react/24/outline';
-import { GeneratedPost } from '../types';
+import { GeneratedPost, AutoVideoResult } from '../types';
+import { buildAutoVideoFromScenes } from '../services/localVideoBuilder';
 
 type ChannelBlock = {
   labels: string[];
@@ -21,28 +22,46 @@ const groupChannels = (post: GeneratedPost): ChannelBlock[] => {
     { label: 'Instagram', text: post.instagramPost, theme: 'pink' as const },
     { label: 'YouTube', text: post.youtubePost, theme: 'red' as const },
     { label: 'AIバズ台本', text: post.buzzScript?.fullScript || '', theme: 'amber' as const },
-    { label: 'トレンド取得', text: post.trendPack ? [
-      `トレンド風タイトル：${post.trendPack.generatedTrendTitle}`,
-      `キーワード：${post.trendPack.trendKeywords.join(' / ')}`,
-      `フック：${post.trendPack.hookPatterns.join(' / ')}`,
-      `構成：${post.trendPack.structureTemplates.join(' / ')}`
-    ].join('\n') : '', theme: 'violet' as const },
-    { label: 'ネタ無限生成', text: post.ideaPack ? [
-      post.ideaPack.fortuneSummary,
-      '',
-      post.ideaPack.loveStory,
-      '',
-      ...post.ideaPack.endlessIdeas.map((item, index) => `${index + 1}. ${item}`)
-    ].join('\n') : '', theme: 'emerald' as const },
+    {
+      label: 'トレンド取得',
+      text: post.trendPack
+        ? [
+            `トレンド風タイトル：${post.trendPack.generatedTrendTitle}`,
+            `キーワード：${post.trendPack.trendKeywords.join(' / ')}`,
+            `フック：${post.trendPack.hookPatterns.join(' / ')}`,
+            `構成：${post.trendPack.structureTemplates.join(' / ')}`,
+          ].join('\n')
+        : '',
+      theme: 'violet' as const,
+    },
+    {
+      label: 'ネタ無限生成',
+      text: post.ideaPack
+        ? [
+            post.ideaPack.fortuneSummary,
+            '',
+            post.ideaPack.loveStory,
+            '',
+            ...post.ideaPack.endlessIdeas.map((item, index) => `${index + 1}. ${item}`),
+          ].join('\n')
+        : '',
+      theme: 'emerald' as const,
+    },
     { label: '投稿データ', text: post.postPackage?.readyToPostText || '', theme: 'amber' as const },
-    { label: 'バズ分析', text: post.buzzAnalysis ? [
-      `スコア：${post.buzzAnalysis.score}`,
-      `強み：${post.buzzAnalysis.strengths.join(' / ')}`,
-      `弱点：${post.buzzAnalysis.weakPoints.join(' / ') || 'なし'}`,
-      `最適化：${post.buzzAnalysis.optimizationNext.join(' / ')}`,
-      `履歴テーマ：${post.buzzAnalysis.topThemesFromHistory.join(' / ') || 'なし'}`,
-      `履歴フック：${post.buzzAnalysis.topHookPatternsFromHistory.join(' / ') || 'なし'}`
-    ].join('\n') : '', theme: 'violet' as const },
+    {
+      label: 'バズ分析',
+      text: post.buzzAnalysis
+        ? [
+            `スコア：${post.buzzAnalysis.score}`,
+            `強み：${post.buzzAnalysis.strengths.join(' / ')}`,
+            `弱点：${post.buzzAnalysis.weakPoints.join(' / ') || 'なし'}`,
+            `最適化：${post.buzzAnalysis.optimizationNext.join(' / ')}`,
+            `履歴テーマ：${post.buzzAnalysis.topThemesFromHistory.join(' / ') || 'なし'}`,
+            `履歴フック：${post.buzzAnalysis.topHookPatternsFromHistory.join(' / ') || 'なし'}`,
+          ].join('\n')
+        : '',
+      theme: 'violet' as const,
+    },
   ].filter((item) => normalizeText(item.text) !== '');
 
   const grouped = new Map<string, ChannelBlock>();
@@ -55,7 +74,7 @@ const groupChannels = (post: GeneratedPost): ChannelBlock[] => {
       grouped.set(key, {
         labels: [item.label],
         text: item.text,
-        theme: item.theme
+        theme: item.theme,
       });
     }
   });
@@ -68,50 +87,50 @@ const themeClassMap = {
     wrap: 'bg-white border-slate-100',
     badge: 'bg-indigo-50 text-indigo-600 border-indigo-100',
     text: 'text-slate-700 bg-slate-50/40 border-slate-100',
-    button: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200'
+    button: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-200',
   },
   dark: {
     wrap: 'bg-slate-900 border-slate-800',
     badge: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/20',
     text: 'text-cyan-50 bg-slate-950/50 border-slate-800',
-    button: 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+    button: 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700',
   },
   sky: {
     wrap: 'bg-sky-50 border-sky-100',
     badge: 'bg-white text-sky-600 border-sky-100',
     text: 'text-slate-700 bg-white/70 border-sky-100',
-    button: 'bg-sky-500 hover:bg-sky-600 text-white shadow-sky-200'
+    button: 'bg-sky-500 hover:bg-sky-600 text-white shadow-sky-200',
   },
   pink: {
     wrap: 'bg-pink-50 border-pink-100',
     badge: 'bg-white text-pink-600 border-pink-100',
     text: 'text-slate-700 bg-white/70 border-pink-100',
-    button: 'bg-pink-500 hover:bg-pink-600 text-white shadow-pink-200'
+    button: 'bg-pink-500 hover:bg-pink-600 text-white shadow-pink-200',
   },
   red: {
     wrap: 'bg-red-50 border-red-100',
     badge: 'bg-white text-red-600 border-red-100',
     text: 'text-slate-700 bg-white/70 border-red-100',
-    button: 'bg-red-500 hover:bg-red-600 text-white shadow-red-200'
+    button: 'bg-red-500 hover:bg-red-600 text-white shadow-red-200',
   },
   amber: {
     wrap: 'bg-amber-50 border-amber-100',
     badge: 'bg-white text-amber-700 border-amber-100',
     text: 'text-slate-700 bg-white/70 border-amber-100',
-    button: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200'
+    button: 'bg-amber-500 hover:bg-amber-600 text-white shadow-amber-200',
   },
   violet: {
     wrap: 'bg-violet-50 border-violet-100',
     badge: 'bg-white text-violet-700 border-violet-100',
     text: 'text-slate-700 bg-white/70 border-violet-100',
-    button: 'bg-violet-500 hover:bg-violet-600 text-white shadow-violet-200'
+    button: 'bg-violet-500 hover:bg-violet-600 text-white shadow-violet-200',
   },
   emerald: {
     wrap: 'bg-emerald-50 border-emerald-100',
     badge: 'bg-white text-emerald-700 border-emerald-100',
     text: 'text-slate-700 bg-white/70 border-emerald-100',
-    button: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200'
-  }
+    button: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200',
+  },
 };
 
 interface ResultCardProps {
@@ -123,9 +142,12 @@ interface ResultCardProps {
 export const ResultCard: React.FC<ResultCardProps> = ({
   post,
   history = [],
-  onSelectHistory
+  onSelectHistory,
 }) => {
   const [copiedKey, setCopiedKey] = useState('');
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [localVideo, setLocalVideo] = useState<AutoVideoResult | null>(post.autoVideo || null);
+
   const groupedBlocks = useMemo(() => groupChannels(post), [post]);
 
   const handleCopy = async (text: string, key: string) => {
@@ -135,6 +157,23 @@ export const ResultCard: React.FC<ResultCardProps> = ({
       setTimeout(() => setCopiedKey(''), 2000);
     } catch (err) {
       console.error('Copy failed', err);
+    }
+  };
+
+  const handleGenerateVideo = async () => {
+    if (!post.buzzScript?.scenes?.length) return;
+
+    setVideoLoading(true);
+    try {
+      const result = await buildAutoVideoFromScenes(post.buzzScript.scenes);
+      if (result) {
+        setLocalVideo(result);
+      }
+    } catch (error) {
+      console.error('Video generation failed', error);
+      alert('動画生成に失敗しました。もう一度お試しください。');
+    } finally {
+      setVideoLoading(false);
     }
   };
 
@@ -198,32 +237,73 @@ export const ResultCard: React.FC<ResultCardProps> = ({
                 <div className="text-[11px] font-black tracking-[0.2em] text-slate-400 uppercase">Auto Video</div>
                 <h3 className="text-2xl font-black text-slate-800 mt-2">記事 → 動画 自動変換</h3>
               </div>
-              {post.autoVideo?.videoDataUrl && (
-                <a
-                  href={post.autoVideo.videoDataUrl}
-                  download={`${post.theme || 'tiktok-auto-video'}.webm`}
-                  className="px-5 py-3 rounded-2xl bg-black text-white font-black"
-                >
-                  動画を保存
-                </a>
-              )}
+
+              <div className="flex gap-3 flex-wrap">
+                {!localVideo?.videoDataUrl && (
+                  <button
+                    type="button"
+                    onClick={handleGenerateVideo}
+                    disabled={videoLoading}
+                    className="px-5 py-3 rounded-2xl bg-black text-white font-black disabled:opacity-50"
+                  >
+                    {videoLoading ? '動画生成中…' : '動画を生成'}
+                  </button>
+                )}
+
+                {localVideo?.videoDataUrl && (
+                  <a
+                    href={localVideo.videoDataUrl}
+                    download={`${post.theme || 'tiktok-auto-video'}.webm`}
+                    className="px-5 py-3 rounded-2xl bg-emerald-600 text-white font-black"
+                  >
+                    動画を保存
+                  </a>
+                )}
+              </div>
             </div>
 
-            {post.autoVideo?.videoDataUrl ? (
+            {localVideo?.videoDataUrl ? (
               <video
                 controls
                 className="w-full rounded-3xl bg-black"
-                src={post.autoVideo.videoDataUrl}
+                src={localVideo.videoDataUrl}
               />
             ) : (
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 font-bold text-slate-600">
-                動画プレビューを生成できない環境です。シーン画像と台本は生成済みです。
+                動画はまだ生成していません。必要な時だけ「動画を生成」を押してください。
               </div>
             )}
 
-            {post.autoVideo?.sceneImages?.length ? (
+            {(localVideo?.sceneImages?.length || post.buzzScript?.scenes?.length) ? (
+              <div className="space-y-4">
+                <div className="text-sm font-black text-slate-700">シーン構成</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {post.buzzScript.scenes.map((scene) => (
+                    <div
+                      key={scene.id}
+                      className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                    >
+                      <div className="text-xs font-black text-slate-400 uppercase tracking-widest">
+                        {scene.englishKeyword}
+                      </div>
+                      <div className="text-lg font-black text-slate-800 mt-2">
+                        {scene.title}
+                      </div>
+                      <div className="text-sm text-slate-600 mt-2 whitespace-pre-wrap">
+                        {scene.text}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-3">
+                        {scene.durationSec}秒
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {localVideo?.sceneImages?.length ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {post.autoVideo.sceneImages.map((src, index) => (
+                {localVideo.sceneImages.map((src, index) => (
                   <img
                     key={`${src}-${index}`}
                     src={src}
