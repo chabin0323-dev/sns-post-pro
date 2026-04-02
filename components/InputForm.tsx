@@ -20,7 +20,11 @@ interface InputFormProps {
     templateUrl: string,
     tiktokTemplateText: string,
     insertPosition: 'start' | 'end',
-    tiktokInsertPosition: 'start' | 'end' | 'both'
+    tiktokInsertPosition: 'start' | 'end' | 'both',
+    userName: string,
+    birthDate: string,
+    autoCtaEnabled: boolean,
+    scheduleTimes: string[]
   ) => void;
   onCancel: () => void;
   loadingState: LoadingState;
@@ -199,9 +203,17 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [insertPosition, setInsertPosition] = useState<'start' | 'end'>('end');
   const [tiktokInsertPosition, setTiktokInsertPosition] = useState<'start' | 'end' | 'both'>('start');
 
+  const [userName, setUserName] = useState('');
+  const [birthDate, setBirthDate] = useState('');
+  const [scheduleMorning, setScheduleMorning] = useState('08:00');
+  const [scheduleNoon, setScheduleNoon] = useState('12:00');
+  const [scheduleNight, setScheduleNight] = useState('20:00');
+  const [autoCtaEnabled, setAutoCtaEnabled] = useState(true);
+
   const [openBasic, setOpenBasic] = useState(false);
   const [openCommon, setOpenCommon] = useState(false);
   const [openTiktok, setOpenTiktok] = useState(false);
+  const [openAutomation, setOpenAutomation] = useState(true);
   const [showThemeHistory, setShowThemeHistory] = useState(false);
 
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -218,7 +230,12 @@ export const InputForm: React.FC<InputFormProps> = ({
       templateUrl: 'history_template_url',
       tiktokTemplateText: 'history_tiktok_template_text',
       insertPosition: 'history_insert_position',
-      tiktokInsertPosition: 'history_tiktok_insert_position'
+      tiktokInsertPosition: 'history_tiktok_insert_position',
+      userName: 'history_user_name',
+      birthDate: 'history_birth_date',
+      scheduleMorning: 'history_schedule_morning',
+      scheduleNoon: 'history_schedule_noon',
+      scheduleNight: 'history_schedule_night',
     }),
     []
   );
@@ -232,6 +249,8 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokTemplateText));
   const [insertPositionHistory, setInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.insertPosition));
   const [tiktokInsertPositionHistory, setTiktokInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokInsertPosition));
+  const [userNameHistory, setUserNameHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.userName));
+  const [birthDateHistory, setBirthDateHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.birthDate));
 
   const saveAllHistories = () => {
     setThemeHistory(addHistory(HISTORY_KEYS.theme, theme));
@@ -243,6 +262,11 @@ export const InputForm: React.FC<InputFormProps> = ({
     setTiktokTemplateTextHistory(addHistory(HISTORY_KEYS.tiktokTemplateText, tiktokTemplateText));
     setInsertPositionHistory(addHistory(HISTORY_KEYS.insertPosition, insertPosition));
     setTiktokInsertPositionHistory(addHistory(HISTORY_KEYS.tiktokInsertPosition, tiktokInsertPosition));
+    setUserNameHistory(addHistory(HISTORY_KEYS.userName, userName));
+    setBirthDateHistory(addHistory(HISTORY_KEYS.birthDate, birthDate));
+    addHistory(HISTORY_KEYS.scheduleMorning, scheduleMorning);
+    addHistory(HISTORY_KEYS.scheduleNoon, scheduleNoon);
+    addHistory(HISTORY_KEYS.scheduleNight, scheduleNight);
   };
 
   const handleSuggest = async () => {
@@ -286,6 +310,8 @@ export const InputForm: React.FC<InputFormProps> = ({
     (suggestionPage + 1) * ITEMS_PER_PAGE
   );
 
+  const scheduleTimes = [scheduleMorning, scheduleNoon, scheduleNight].filter(Boolean);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!theme.trim()) return;
@@ -301,7 +327,11 @@ export const InputForm: React.FC<InputFormProps> = ({
       templateUrl,
       tiktokTemplateText,
       insertPosition,
-      tiktokInsertPosition
+      tiktokInsertPosition,
+      userName,
+      birthDate,
+      autoCtaEnabled,
+      scheduleTimes
     );
   };
 
@@ -343,8 +373,8 @@ export const InputForm: React.FC<InputFormProps> = ({
             <input
               value={theme}
               onChange={(e) => setTheme(e.target.value)}
-              placeholder="例：恋愛、副業、ダイエット"
-              className="w-full pl-12 pr-4 py-4 rounded-2xl border outline-none border-indigo-200 focus:border-indigo-400"
+              placeholder="例：復縁、不倫、片思い"
+              className="w-full pl-12 pr-4 py-4 rounded-2xl border outline-none border-indigo-200"
               disabled={isLoading}
             />
           </div>
@@ -387,6 +417,91 @@ export const InputForm: React.FC<InputFormProps> = ({
             </div>
           )}
         </div>
+
+        <SectionButton
+          title="自動化設定"
+          subtitle="名前・生年月日・投稿時間・全部自動生成"
+          isOpen={openAutomation}
+          onClick={() => setOpenAutomation(!openAutomation)}
+          className="bg-gradient-to-r from-pink-100 to-cyan-100 border-pink-200"
+        />
+
+        {openAutomation && (
+          <div className="p-4 space-y-4 bg-white rounded-2xl border border-pink-100">
+            <input
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
+              className="w-full p-3 rounded-xl border"
+              placeholder="名前"
+            />
+            <HistoryChips
+              title="名前履歴"
+              items={userNameHistory}
+              onSelect={setUserName}
+              onDelete={(value) => setUserNameHistory(removeHistory(HISTORY_KEYS.userName, value))}
+            />
+
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              className="w-full p-3 rounded-xl border"
+            />
+            <HistoryChips
+              title="生年月日履歴"
+              items={birthDateHistory}
+              onSelect={setBirthDate}
+              onDelete={(value) => setBirthDateHistory(removeHistory(HISTORY_KEYS.birthDate, value))}
+            />
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <input
+                type="time"
+                value={scheduleMorning}
+                onChange={(e) => setScheduleMorning(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              />
+              <input
+                type="time"
+                value={scheduleNoon}
+                onChange={(e) => setScheduleNoon(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              />
+              <input
+                type="time"
+                value={scheduleNight}
+                onChange={(e) => setScheduleNight(e.target.value)}
+                className="w-full p-3 rounded-xl border"
+              />
+            </div>
+
+            <label className="flex items-center gap-3 rounded-2xl border border-slate-200 p-4">
+              <input
+                type="checkbox"
+                checked={autoCtaEnabled}
+                onChange={(e) => setAutoCtaEnabled(e.target.checked)}
+              />
+              <span className="font-bold text-slate-700">
+                動画の最後に「続きはプロフィール / 無料占いはこちら」を自動挿入
+              </span>
+            </label>
+
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <button type="submit" className="rounded-2xl bg-fuchsia-500 text-white font-black py-3">
+                台本生成
+              </button>
+              <button type="submit" className="rounded-2xl bg-cyan-500 text-white font-black py-3">
+                動画生成
+              </button>
+              <button type="submit" className="rounded-2xl bg-emerald-500 text-white font-black py-3">
+                投稿データ作成
+              </button>
+              <button type="submit" className="rounded-2xl bg-black text-white font-black py-3">
+                全部自動生成
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           <SectionButton
