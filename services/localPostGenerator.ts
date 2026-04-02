@@ -8,84 +8,61 @@ const cleanTagText = (text: string) =>
   text.replace(/\s+/g, '').replace(/[^\p{L}\p{N}]/gu, '');
 
 const uniqueTags = (tags: string[], count: number) =>
-  Array.from(new Set(tags)).slice(0, count);
+  Array.from(new Set(tags.filter(Boolean))).slice(0, count);
 
-const getNoteHashtags = (theme: string) => {
+const TAG_DB: Record<string, string[]> = {
+  復縁: ['#復縁', '#復縁したい', '#元彼', '#元カレ', '#元サヤ', '#復縁占い', '#復縁方法'],
+  不倫: ['#不倫', '#秘密の恋', '#大人の恋愛', '#許されない恋', '#複雑愛', '#不倫の悩み', '#不倫占い'],
+  片思い: ['#片思い', '#好きな人', '#恋愛成就', '#脈あり', '#告白', '#片思い占い', '#恋の悩み'],
+  告白: ['#告白', '#告白成功', '#告白コツ', '#恋愛成就', '#好きな人', '#告白タイミング', '#恋愛心理'],
+  本音: ['#本音', '#彼の本音', '#相手の気持ち', '#恋愛心理', '#本心', '#気持ちが知りたい', '#恋愛占い'],
+  既読無視: ['#既読無視', '#連絡こない', '#恋愛の悩み', '#脈なし', '#恋愛心理', '#好きな人', '#既読スルー'],
+  遠距離: ['#遠距離恋愛', '#会えない恋', '#恋愛の悩み', '#遠距離カップル', '#連絡頻度', '#恋愛成就'],
+  相性: ['#相性', '#相性占い', '#運命の人', '#恋愛占い', '#恋愛運', '#カップル相性', '#相性診断'],
+  ツインレイ: ['#ツインレイ', '#魂の片割れ', '#運命の人', '#スピリチュアル', '#恋愛占い', '#引き寄せ'],
+  恋愛: ['#恋愛', '#恋愛占い', '#恋愛心理', '#恋愛成就', '#好きな人', '#本音', '#相性'],
+};
+
+const DEFAULT_THEME_TAGS = ['#恋愛', '#恋愛占い', '#恋愛心理', '#本音', '#相性', '#運命の人'];
+
+const getThemeTags = (theme: string) => {
+  const matched = Object.entries(TAG_DB).find(([key]) => theme.includes(key));
   const cleaned = cleanTagText(theme);
-  return uniqueTags([
-    `#${cleaned}`,
-    '#恋愛',
-    '#占い',
-    '#恋愛占い',
-    '#恋愛心理',
-    '#本音',
-    '#運命',
-    '#引き寄せ',
-  ], 5);
+
+  if (matched) {
+    return uniqueTags([`#${cleaned}`, ...matched[1]], 6);
+  }
+
+  return uniqueTags([`#${cleaned}`, ...DEFAULT_THEME_TAGS], 6);
 };
 
 const getTikTokHashtags = (theme: string) => {
-  const cleaned = cleanTagText(theme);
-  return uniqueTags([
-    `#${cleaned}`,
-    '#TikTok',
-    '#おすすめ',
-    '#おすすめにのりたい',
-    '#バズりたい',
-    '#恋愛',
-    '#恋愛占い',
-    '#恋愛心理',
-    '#片思い',
-    '#復縁',
-    '#運命の人',
-    '#本音',
-  ], 5);
+  const fixed = ['#おすすめ', '#fyp'];
+  const variable = getThemeTags(theme);
+  return uniqueTags([...variable, ...fixed], 5);
 };
 
 const getXHashtags = (theme: string) => {
-  const cleaned = cleanTagText(theme);
-  return uniqueTags([
-    `#${cleaned}`,
-    '#恋愛',
-    '#恋愛相談',
-    '#恋愛心理',
-    '#恋愛成就',
-    '#占い',
-    '#復縁',
-    '#片思い',
-  ], 3);
+  const variable = getThemeTags(theme);
+  return uniqueTags(variable, 3);
 };
 
 const getInstagramHashtags = (theme: string) => {
-  const cleaned = cleanTagText(theme);
-  return uniqueTags([
-    `#${cleaned}`,
-    '#恋愛',
-    '#恋愛占い',
-    '#恋愛心理',
-    '#恋愛成就',
-    '#片思い',
-    '#復縁',
-    '#本音',
-    '#引き寄せ',
-    '#運命の人',
-    '#恋愛運',
-    '#相性',
-  ], 10);
+  const variable = getThemeTags(theme);
+  const support = ['#恋愛', '#恋愛占い', '#恋愛心理', '#恋愛成就', '#好きな人', '#本音', '#相性', '#運命の人'];
+  return uniqueTags([...variable, ...support], 10);
 };
 
 const getYouTubeHashtags = (theme: string) => {
-  const cleaned = cleanTagText(theme);
-  return uniqueTags([
-    `#${cleaned}`,
-    '#恋愛',
-    '#占い',
-    '#恋愛占い',
-    '#恋愛心理',
-    '#復縁',
-    '#片思い',
-    '#相性',
-  ], 5);
+  const variable = getThemeTags(theme);
+  const support = ['#恋愛', '#占い', '#恋愛占い', '#相性', '#本音'];
+  return uniqueTags([...variable, ...support], 5);
+};
+
+const getNoteHashtags = (theme: string) => {
+  const variable = getThemeTags(theme);
+  const support = ['#恋愛', '#占い', '#恋愛占い', '#恋愛心理', '#本音'];
+  return uniqueTags([...variable, ...support], 5);
 };
 
 const buildTemplateBlock = (templateText: string, templateUrl: string) => {
