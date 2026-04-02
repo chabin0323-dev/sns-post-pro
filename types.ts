@@ -13,6 +13,19 @@ export interface GeneratedPost {
   xPost: string;
   instagramPost: string;
   youtubePost: string;
+
+  article?: string;
+  cta?: string;
+  thumbnail?: string;
+  capcutTemplate?: string;
+  profile?: string;
+  noteLead?: string;
+  weeklyTemplates?: string[];
+  buzzScore?: number;
+
   theme?: string;
-  timestamp?: Date;
+  generatedLength?: string;
+  generatedGender?: string;
+  generatedAge?: string;
+  timestamp?: Date | string;
 }
