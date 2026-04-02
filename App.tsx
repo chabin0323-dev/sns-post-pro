@@ -34,7 +34,6 @@ const isValidSavedPost = (data: any): data is GeneratedPost => {
 
 const sanitizePost = (data: any): GeneratedPost | null => {
   if (!isValidSavedPost(data)) return null;
-
   return {
     ...data,
     timestamp: data.timestamp ?? new Date().toISOString(),
@@ -170,7 +169,8 @@ const App: React.FC = () => {
     insertPosition: 'start' | 'end',
     tiktokInsertPosition: 'start' | 'end' | 'both',
     autoCtaEnabled: boolean,
-    scheduleTimes: string[]
+    scheduleTimes: string[],
+    hashtagMode: 'あり' | 'なし'
   ) => {
     setLoadingState(LoadingState.LOADING);
     setShowGuide(false);
@@ -186,7 +186,8 @@ const App: React.FC = () => {
         templateUrl,
         tiktokTemplateText,
         insertPosition,
-        tiktokInsertPosition
+        tiktokInsertPosition,
+        hashtagMode
       );
 
       const historyForAnalysis = generatedHistory.map(stripHeavyVideoData);
