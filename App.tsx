@@ -83,6 +83,9 @@ const readGeneratedHistory = (): GeneratedPost[] => {
   }
 };
 
+const getHistoryItemKey = (post: GeneratedPost, index?: number) =>
+  `${post.timestamp ?? 'time'}__${post.title ?? 'title'}__${post.theme ?? 'theme'}__${index ?? ''}`;
+
 const App: React.FC = () => {
   const [currentPost, setCurrentPost] = useState<GeneratedPost | null>(() => {
     try {
@@ -198,7 +201,7 @@ const App: React.FC = () => {
       const schedulePack = generateSchedulePack(scheduleTimes, theme);
       const postPackage = buildPostPackage(theme, base.hashtags, autoCtaEnabled);
       const buzzAnalysis = analyzeBuzzFromHistory(theme, historyForAnalysis);
-      const autoVideo = await buildAutoVideoFromScenes(buzzScript.scenes);
+      const autoVideo = null;
 
       const result: GeneratedPost = {
         ...base,
@@ -206,6 +209,7 @@ const App: React.FC = () => {
         timestamp: new Date().toISOString(),
         autoCtaEnabled,
         scheduleTimes,
+        hashtagMode,
         buzzScript,
         trendPack,
         ideaPack,
@@ -235,6 +239,23 @@ const App: React.FC = () => {
     setCurrentPost(post);
     setLoadingState(LoadingState.SUCCESS);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteHistory = (post: GeneratedPost, index: number) => {
+    const targetKey = getHistoryItemKey(post, index);
+
+    setGeneratedHistory((prev) => {
+      const next = prev.filter((item, i) => getHistoryItemKey(item, i) !== targetKey);
+
+      if (currentPost && getHistoryItemKey(currentPost) === getHistoryItemKey(post)) {
+        setCurrentPost(next.length > 0 ? next[0] : null);
+        if (next.length === 0) {
+          setLoadingState(LoadingState.IDLE);
+        }
+      }
+
+      return next;
+    });
   };
 
   return (
@@ -286,6 +307,7 @@ const App: React.FC = () => {
               post={currentPost}
               history={generatedHistory.map(stripHeavyVideoData)}
               onSelectHistory={handleSelectHistory}
+              onDeleteHistory={handleDeleteHistory}
             />
           </div>
         )}
