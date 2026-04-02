@@ -36,9 +36,22 @@ const CTA_SET = [
   '無料占いはこちら',
 ];
 
-const zodiacs = [
-  '子', '丑', '寅', '卯', '辰', '巳',
-  '午', '未', '申', '酉', '戌', '亥'
+const UNIVERSAL_PERSONAS = [
+  '連絡を待ってしまう人',
+  '相手の本音が気になる人',
+  '頑張るほど空回りしやすい人',
+  '優しすぎて損しやすい人',
+  '好きな人に振り回されやすい人',
+  '不安になると考えすぎる人',
+];
+
+const STORY_FRAGMENTS = [
+  '既読はつくのに、関係が進まない',
+  '相手の態度に一喜一憂してしまう',
+  '嫌われたくなくて本音を隠してしまう',
+  '少し優しくされるだけで期待してしまう',
+  '距離を詰めたいのにタイミングがずれる',
+  '追うほど苦しくなってしまう',
 ];
 
 const toSeed = (input: string) =>
@@ -49,28 +62,27 @@ const seededPick = <T,>(items: T[], seed: number, offset = 0): T =>
 
 const generateScenes = (
   theme: string,
-  hook: string,
   shockOrSolution: string,
   pullLine: string
 ): BuzzScene[] => [
   {
     id: 'scene-1',
     title: '疑問形タイトル',
-    text: `${theme}で悩む人、実は最初に見直す場所が違います。`,
+    text: `${theme}で悩む人、最初に見直す場所を間違えていませんか？`,
     englishKeyword: 'QUESTION',
     durationSec: 8,
   },
   {
     id: 'scene-2',
     title: '常識の否定',
-    text: `頑張るほど良い、は恋愛では逆になることがあります。`,
+    text: `頑張るほど良い、は${theme}では逆になることがあります。`,
     englishKeyword: 'DENIAL',
     durationSec: 8,
   },
   {
     id: 'scene-3',
     title: '共感ストーリー',
-    text: `連絡を待って、占って、でも苦しくなる。その流れ、あなただけではありません。`,
+    text: `期待して、不安になって、また待ってしまう。その流れにハマる人は本当に多いです。`,
     englishKeyword: 'EMPATHY',
     durationSec: 8,
   },
@@ -131,13 +143,13 @@ export const generateBuzzScriptPack = (
   const questionTitle = `${theme}がうまくいかない本当の理由、知っていますか？`;
   const hook = seededPick(HOOK_DB, seed, 0);
   const denial = `「待てば好転する」は${theme}では通用しないことがあります。`;
-  const empathyStory = `何度も相手の気持ちを考えて、期待して、でも不安になる。その流れにハマる人は本当に多いです。`;
+  const empathyStory = `期待して、考えすぎて、また不安になる。その流れにハマる人は本当に多いです。`;
   const shockOrSolution = `${theme}で流れを変える人は、感情ではなくタイミングと見せ方を先に整えています。`;
   const pullLine = autoCtaEnabled
     ? `${CTA_SET[0]}。${CTA_SET[1]}。`
     : '続きは次の投稿で解説します。';
 
-  const scenes = generateScenes(theme, hook, shockOrSolution, pullLine);
+  const scenes = generateScenes(theme, shockOrSolution, pullLine);
 
   return {
     questionTitle,
@@ -159,27 +171,24 @@ export const generateBuzzScriptPack = (
 };
 
 export const generateInfiniteIdeaPack = (
-  theme: string,
-  name: string,
-  birthDate: string
+  theme: string
 ): InfiniteIdeaPack => {
-  const safeName = name.trim() || 'あなた';
-  const safeBirth = birthDate.trim() || '1990-01-01';
-  const date = new Date(safeBirth);
-  const zodiac = zodiacs[(date.getFullYear() - 4 + 1200) % 12];
+  const seed = toSeed(theme);
+  const persona = seededPick(UNIVERSAL_PERSONAS, seed, 0);
+  const story = seededPick(STORY_FRAGMENTS, seed, 2);
 
-  const fortuneSummary = `${safeName}さんは${zodiac}の気質が強く、${theme}では直感よりも“伝える順番”を整えるほど流れが上向きやすいタイプです。`;
+  const fortuneSummary = `${theme}で流れが変わる人は、勢いよりも“伝え方の順番”を整えた瞬間に恋愛運が上向きやすいです。特に${persona}は、焦るほど逆効果になりやすい傾向があります。`;
 
-  const loveStory = `${safeName}さんの恋は、最初は静かに進みますが、ある瞬間に一気に流れが変わる傾向があります。${theme}を題材にすると、見えない本音・すれ違い・再接近の兆しをストーリー化しやすくなります。`;
+  const loveStory = `${story}。でも本当に大事なのは、相手を追うことではなく、自分の見せ方とタイミングを整えることです。${theme}を題材にすると、すれ違い・本音・逆転の流れをストーリー化しやすくなります。`;
 
   const endlessIdeas = [
     `${theme}で相手の本音が出る瞬間`,
     `${theme}で連絡が来る前兆`,
     `${theme}でやってはいけない行動3つ`,
     `${theme}で逆転する人の共通点`,
-    `${theme}と${zodiac}の恋愛傾向`,
-    `${safeName}さんタイプがハマりやすい恋の罠`,
-    `${theme}を占いストーリーにしたらこうなる`,
+    `${theme}で不安が増える理由`,
+    `${theme}で流れを変える一言`,
+    `${theme}を恋愛ストーリー化したらこうなる`,
   ];
 
   return {
