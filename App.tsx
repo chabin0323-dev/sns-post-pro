@@ -5,13 +5,18 @@ import { ResultCard } from './components/ResultCard';
 import { UserGuide } from './components/UserGuide';
 import { LoadingState, GeneratedPost } from './types';
 import { generateSNSPostContent } from './services/localPostGenerator';
-import { generateAdvancedPack } from './services/advancedGenerator';
+import {
+  analyzeBuzzFromHistory,
+  buildPostPackage,
+  generateBuzzScriptPack,
+  generateInfiniteIdeaPack,
+  generateSchedulePack,
+  generateTrendPack,
+} from './services/tiktokAutomation';
+import { buildAutoVideoFromScenes } from './services/localVideoBuilder';
 
 const STORAGE_KEY = 'latest_generated_post';
-const GENERATED_HISTORY_KEY = 'generated_post_history_v2';
-
-const isStringArray = (value: unknown): value is string[] =>
-  Array.isArray(value) && value.every((item) => typeof item === 'string');
+const GENERATED_HISTORY_KEY = 'generated_post_history_v3';
 
 const isValidSavedPost = (data: any): data is GeneratedPost => {
   return (
@@ -27,22 +32,10 @@ const isValidSavedPost = (data: any): data is GeneratedPost => {
   );
 };
 
-const sanitizeSavedPost = (data: any): GeneratedPost | null => {
+const sanitizePost = (data: any): GeneratedPost | null => {
   if (!isValidSavedPost(data)) return null;
-
   return {
     ...data,
-    article: typeof data.article === 'string' ? data.article : '',
-    cta: typeof data.cta === 'string' ? data.cta : '',
-    thumbnail: typeof data.thumbnail === 'string' ? data.thumbnail : '',
-    capcutTemplate: typeof data.capcutTemplate === 'string' ? data.capcutTemplate : '',
-    profile: typeof data.profile === 'string' ? data.profile : '',
-    noteLead: typeof data.noteLead === 'string' ? data.noteLead : '',
-    weeklyTemplates: isStringArray(data.weeklyTemplates) ? data.weeklyTemplates : [],
-    buzzScore: typeof data.buzzScore === 'number' ? data.buzzScore : 0,
-    generatedLength: typeof data.generatedLength === 'string' ? data.generatedLength : '',
-    generatedGender: typeof data.generatedGender === 'string' ? data.generatedGender : '',
-    generatedAge: typeof data.generatedAge === 'string' ? data.generatedAge : '',
     timestamp: data.timestamp ?? new Date().toISOString(),
   };
 };
@@ -51,13 +44,9 @@ const readGeneratedHistory = (): GeneratedPost[] => {
   try {
     const raw = localStorage.getItem(GENERATED_HISTORY_KEY);
     if (!raw) return [];
-
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-
-    return parsed
-      .map((item) => sanitizeSavedPost(item))
-      .filter((item): item is GeneratedPost => item !== null);
+    return parsed.map(sanitizePost).filter((item): item is GeneratedPost => !!item);
   } catch {
     return [];
   }
@@ -68,14 +57,9 @@ const App: React.FC = () => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (!saved) return null;
-
       const parsed = JSON.parse(saved);
-      const sanitized = sanitizeSavedPost(parsed);
-
-      if (sanitized) {
-        return sanitized;
-      }
-
+      const normalized = sanitizePost(parsed);
+      if (normalized) return normalized;
       localStorage.removeItem(STORAGE_KEY);
       return null;
     } catch {
@@ -138,7 +122,7 @@ const App: React.FC = () => {
     setProgress(0);
   };
 
-  const handleGenerate = (
+  const handleGenerate = async (
     theme: string,
     length: string,
     gender: string,
@@ -147,48 +131,63 @@ const App: React.FC = () => {
     templateUrl: string,
     tiktokTemplateText: string,
     insertPosition: 'start' | 'end',
-    tiktokInsertPosition: 'start' | 'end' | 'both'
+    tiktokInsertPosition: 'start' | 'end' | 'both',
+    userName: string,
+    birthDate: string,
+    autoCtaEnabled: boolean,
+    scheduleTimes: string[]
   ) => {
     setLoadingState(LoadingState.LOADING);
     setShowGuide(false);
     startProgress();
 
-    setTimeout(() => {
-      try {
-        const result = generateSNSPostContent(
-          theme,
-          length,
-          gender,
-          age,
-          templateText,
-          templateUrl,
-          tiktokTemplateText,
-          insertPosition,
-          tiktokInsertPosition
-        );
+    try {
+      const base = generateSNSPostContent(
+        theme,
+        length,
+        gender,
+        age,
+        templateText,
+        templateUrl,
+        tiktokTemplateText,
+        insertPosition,
+        tiktokInsertPosition
+      );
 
-        const advanced = generateAdvancedPack(theme, length, gender, age);
+      const buzzScript = generateBuzzScriptPack(theme, autoCtaEnabled);
+      const trendPack = generateTrendPack(theme);
+      const ideaPack = generateInfiniteIdeaPack(theme, userName, birthDate);
+      const schedulePack = generateSchedulePack(scheduleTimes, theme);
+      const postPackage = buildPostPackage(theme, base.hashtags, autoCtaEnabled);
+      const buzzAnalysis = analyzeBuzzFromHistory(theme, generatedHistory);
+      const autoVideo = await buildAutoVideoFromScenes(buzzScript.scenes);
 
-        const enhancedPost: GeneratedPost = {
-          ...result,
-          ...advanced,
-          theme,
-          generatedLength: length,
-          generatedGender: gender,
-          generatedAge: age,
-          timestamp: new Date().toISOString(),
-        };
+      const result: GeneratedPost = {
+        ...base,
+        theme,
+        timestamp: new Date().toISOString(),
+        userName,
+        birthDate,
+        autoCtaEnabled,
+        scheduleTimes,
+        buzzScript,
+        trendPack,
+        ideaPack,
+        schedulePack,
+        postPackage,
+        buzzAnalysis,
+        autoVideo,
+      };
 
-        setCurrentPost(enhancedPost);
-        setGeneratedHistory((prev) => [enhancedPost, ...prev].slice(0, 30));
-        setLoadingState(LoadingState.SUCCESS);
-      } catch (error) {
-        console.error(error);
-        setLoadingState(LoadingState.ERROR);
-      } finally {
-        stopProgress();
-      }
-    }, 500);
+      setCurrentPost(result);
+      setGeneratedHistory((prev) => [result, ...prev].slice(0, 30));
+      setLoadingState(LoadingState.SUCCESS);
+    } catch (error) {
+      console.error(error);
+      setLoadingState(LoadingState.ERROR);
+    } finally {
+      stopProgress();
+    }
   };
 
   const handleCancel = () => {
@@ -212,12 +211,7 @@ const App: React.FC = () => {
             <div className="flex items-center gap-2 bg-emerald-500/90 backdrop-blur px-3 py-1.5 rounded-full border border-emerald-400/50 shadow-lg shadow-emerald-500/20">
               <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
               <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                Auto-Saved{' '}
-                {lastSaved.toLocaleTimeString('ja-JP', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                })}
+                Auto-Saved {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
             </div>
           </div>
@@ -228,12 +222,12 @@ const App: React.FC = () => {
             AIで、魅力的な
             <br />
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-yellow-400 to-purple-500">
-              SNS投稿
+              TikTok投稿
             </span>
             を。
           </h2>
           <p className="text-sm md:text-base text-white/60 font-bold">
-            記事・誘導文・サムネ・CapCut台本・プロフィール・note導線・1週間テンプレまで一括生成
+            台本・動画・投稿データをローカルだけでまとめて自動生成
           </p>
         </div>
 
@@ -250,17 +244,15 @@ const App: React.FC = () => {
           progress={progress}
         />
 
-        {(loadingState === LoadingState.SUCCESS ||
-          (currentPost && loadingState === LoadingState.IDLE)) &&
-          currentPost && (
-            <div className="space-y-6">
-              <ResultCard
-                post={currentPost}
-                history={generatedHistory}
-                onSelectHistory={handleSelectHistory}
-              />
-            </div>
-          )}
+        {(loadingState === LoadingState.SUCCESS || (currentPost && loadingState === LoadingState.IDLE)) && currentPost && (
+          <div className="space-y-6">
+            <ResultCard
+              post={currentPost}
+              history={generatedHistory}
+              onSelectHistory={handleSelectHistory}
+            />
+          </div>
+        )}
 
         {loadingState === LoadingState.ERROR && (
           <div className="p-6 bg-red-500/10 text-red-400 rounded-2xl text-center font-bold border border-red-500/20">
