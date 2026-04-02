@@ -81,6 +81,7 @@ export interface GeneratedPost {
   timestamp?: Date | string;
   autoCtaEnabled?: boolean;
   scheduleTimes?: string[];
+  hashtagMode?: 'あり' | 'なし';
 
   buzzScript?: BuzzScriptPack;
   trendPack?: TrendPack;
@@ -88,5 +89,6 @@ export interface GeneratedPost {
   schedulePack?: ScheduleItem[];
   postPackage?: PostPackage;
   buzzAnalysis?: BuzzAnalysis;
+
   autoVideo?: AutoVideoResult | null;
 }
