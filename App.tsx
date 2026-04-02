@@ -34,10 +34,42 @@ const isValidSavedPost = (data: any): data is GeneratedPost => {
 
 const sanitizePost = (data: any): GeneratedPost | null => {
   if (!isValidSavedPost(data)) return null;
+
   return {
     ...data,
     timestamp: data.timestamp ?? new Date().toISOString(),
+    autoVideo: data.autoVideo
+      ? {
+          videoDataUrl: typeof data.autoVideo.videoDataUrl === 'string' ? data.autoVideo.videoDataUrl : '',
+          videoMimeType: typeof data.autoVideo.videoMimeType === 'string' ? data.autoVideo.videoMimeType : '',
+          sceneImages: Array.isArray(data.autoVideo.sceneImages) ? data.autoVideo.sceneImages : [],
+          durationSec: typeof data.autoVideo.durationSec === 'number' ? data.autoVideo.durationSec : 0,
+        }
+      : null,
   };
+};
+
+const stripHeavyVideoData = (post: GeneratedPost): GeneratedPost => {
+  return {
+    ...post,
+    autoVideo: post.autoVideo
+      ? {
+          ...post.autoVideo,
+          videoDataUrl: '',
+          sceneImages: [],
+        }
+      : null,
+  };
+};
+
+const safeSaveToLocalStorage = (key: string, value: unknown) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error(`localStorage save failed: ${key}`, error);
+    return false;
+  }
 };
 
 const readGeneratedHistory = (): GeneratedPost[] => {
@@ -76,14 +108,19 @@ const App: React.FC = () => {
   const progressIntervalRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (currentPost) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(currentPost));
+    if (!currentPost) return;
+
+    const lightPost = stripHeavyVideoData(currentPost);
+    const saved = safeSaveToLocalStorage(STORAGE_KEY, lightPost);
+
+    if (saved) {
       setLastSaved(new Date());
     }
   }, [currentPost]);
 
   useEffect(() => {
-    localStorage.setItem(GENERATED_HISTORY_KEY, JSON.stringify(generatedHistory));
+    const lightHistory = generatedHistory.map(stripHeavyVideoData);
+    safeSaveToLocalStorage(GENERATED_HISTORY_KEY, lightHistory);
   }, [generatedHistory]);
 
   useEffect(() => {
@@ -152,12 +189,14 @@ const App: React.FC = () => {
         tiktokInsertPosition
       );
 
+      const historyForAnalysis = generatedHistory.map(stripHeavyVideoData);
+
       const buzzScript = generateBuzzScriptPack(theme, autoCtaEnabled);
       const trendPack = generateTrendPack(theme);
       const ideaPack = generateInfiniteIdeaPack(theme);
       const schedulePack = generateSchedulePack(scheduleTimes, theme);
       const postPackage = buildPostPackage(theme, base.hashtags, autoCtaEnabled);
-      const buzzAnalysis = analyzeBuzzFromHistory(theme, generatedHistory);
+      const buzzAnalysis = analyzeBuzzFromHistory(theme, historyForAnalysis);
       const autoVideo = await buildAutoVideoFromScenes(buzzScript.scenes);
 
       const result: GeneratedPost = {
@@ -244,7 +283,7 @@ const App: React.FC = () => {
           <div className="space-y-6">
             <ResultCard
               post={currentPost}
-              history={generatedHistory}
+              history={generatedHistory.map(stripHeavyVideoData)}
               onSelectHistory={handleSelectHistory}
             />
           </div>
