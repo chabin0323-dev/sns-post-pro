@@ -21,8 +21,6 @@ interface InputFormProps {
     tiktokTemplateText: string,
     insertPosition: 'start' | 'end',
     tiktokInsertPosition: 'start' | 'end' | 'both',
-    userName: string,
-    birthDate: string,
     autoCtaEnabled: boolean,
     scheduleTimes: string[]
   ) => void;
@@ -203,8 +201,6 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [insertPosition, setInsertPosition] = useState<'start' | 'end'>('end');
   const [tiktokInsertPosition, setTiktokInsertPosition] = useState<'start' | 'end' | 'both'>('start');
 
-  const [userName, setUserName] = useState('');
-  const [birthDate, setBirthDate] = useState('');
   const [scheduleMorning, setScheduleMorning] = useState('08:00');
   const [scheduleNoon, setScheduleNoon] = useState('12:00');
   const [scheduleNight, setScheduleNight] = useState('20:00');
@@ -231,8 +227,6 @@ export const InputForm: React.FC<InputFormProps> = ({
       tiktokTemplateText: 'history_tiktok_template_text',
       insertPosition: 'history_insert_position',
       tiktokInsertPosition: 'history_tiktok_insert_position',
-      userName: 'history_user_name',
-      birthDate: 'history_birth_date',
       scheduleMorning: 'history_schedule_morning',
       scheduleNoon: 'history_schedule_noon',
       scheduleNight: 'history_schedule_night',
@@ -249,8 +243,6 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokTemplateText));
   const [insertPositionHistory, setInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.insertPosition));
   const [tiktokInsertPositionHistory, setTiktokInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokInsertPosition));
-  const [userNameHistory, setUserNameHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.userName));
-  const [birthDateHistory, setBirthDateHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.birthDate));
 
   const saveAllHistories = () => {
     setThemeHistory(addHistory(HISTORY_KEYS.theme, theme));
@@ -262,8 +254,6 @@ export const InputForm: React.FC<InputFormProps> = ({
     setTiktokTemplateTextHistory(addHistory(HISTORY_KEYS.tiktokTemplateText, tiktokTemplateText));
     setInsertPositionHistory(addHistory(HISTORY_KEYS.insertPosition, insertPosition));
     setTiktokInsertPositionHistory(addHistory(HISTORY_KEYS.tiktokInsertPosition, tiktokInsertPosition));
-    setUserNameHistory(addHistory(HISTORY_KEYS.userName, userName));
-    setBirthDateHistory(addHistory(HISTORY_KEYS.birthDate, birthDate));
     addHistory(HISTORY_KEYS.scheduleMorning, scheduleMorning);
     addHistory(HISTORY_KEYS.scheduleNoon, scheduleNoon);
     addHistory(HISTORY_KEYS.scheduleNight, scheduleNight);
@@ -328,8 +318,6 @@ export const InputForm: React.FC<InputFormProps> = ({
       tiktokTemplateText,
       insertPosition,
       tiktokInsertPosition,
-      userName,
-      birthDate,
       autoCtaEnabled,
       scheduleTimes
     );
@@ -420,7 +408,7 @@ export const InputForm: React.FC<InputFormProps> = ({
 
         <SectionButton
           title="自動化設定"
-          subtitle="名前・生年月日・投稿時間・全部自動生成"
+          subtitle="投稿時間・全部自動生成"
           isOpen={openAutomation}
           onClick={() => setOpenAutomation(!openAutomation)}
           className="bg-gradient-to-r from-pink-100 to-cyan-100 border-pink-200"
@@ -428,32 +416,6 @@ export const InputForm: React.FC<InputFormProps> = ({
 
         {openAutomation && (
           <div className="p-4 space-y-4 bg-white rounded-2xl border border-pink-100">
-            <input
-              value={userName}
-              onChange={(e) => setUserName(e.target.value)}
-              className="w-full p-3 rounded-xl border"
-              placeholder="名前"
-            />
-            <HistoryChips
-              title="名前履歴"
-              items={userNameHistory}
-              onSelect={setUserName}
-              onDelete={(value) => setUserNameHistory(removeHistory(HISTORY_KEYS.userName, value))}
-            />
-
-            <input
-              type="date"
-              value={birthDate}
-              onChange={(e) => setBirthDate(e.target.value)}
-              className="w-full p-3 rounded-xl border"
-            />
-            <HistoryChips
-              title="生年月日履歴"
-              items={birthDateHistory}
-              onSelect={setBirthDate}
-              onDelete={(value) => setBirthDateHistory(removeHistory(HISTORY_KEYS.birthDate, value))}
-            />
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <input
                 type="time"
