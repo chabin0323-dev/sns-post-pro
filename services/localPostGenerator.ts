@@ -4,9 +4,88 @@ const getProfileLabel = (gender: string, age: string) => {
   return `${safeAge}${safeGender}`.trim() || '幅広い層';
 };
 
-const getHashtags = (theme: string) => {
-  const cleaned = theme.replace(/\s+/g, '');
-  return [`#${cleaned}`, '#SNS投稿', '#発信力', '#行動改善', '#習慣化'];
+const cleanTagText = (text: string) =>
+  text.replace(/\s+/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+
+const uniqueTags = (tags: string[], count: number) =>
+  Array.from(new Set(tags)).slice(0, count);
+
+const getNoteHashtags = (theme: string) => {
+  const cleaned = cleanTagText(theme);
+  return uniqueTags([
+    `#${cleaned}`,
+    '#恋愛',
+    '#占い',
+    '#恋愛占い',
+    '#恋愛心理',
+    '#本音',
+    '#運命',
+    '#引き寄せ',
+  ], 5);
+};
+
+const getTikTokHashtags = (theme: string) => {
+  const cleaned = cleanTagText(theme);
+  return uniqueTags([
+    `#${cleaned}`,
+    '#TikTok',
+    '#おすすめ',
+    '#おすすめにのりたい',
+    '#バズりたい',
+    '#恋愛',
+    '#恋愛占い',
+    '#恋愛心理',
+    '#片思い',
+    '#復縁',
+    '#運命の人',
+    '#本音',
+  ], 5);
+};
+
+const getXHashtags = (theme: string) => {
+  const cleaned = cleanTagText(theme);
+  return uniqueTags([
+    `#${cleaned}`,
+    '#恋愛',
+    '#恋愛相談',
+    '#恋愛心理',
+    '#恋愛成就',
+    '#占い',
+    '#復縁',
+    '#片思い',
+  ], 3);
+};
+
+const getInstagramHashtags = (theme: string) => {
+  const cleaned = cleanTagText(theme);
+  return uniqueTags([
+    `#${cleaned}`,
+    '#恋愛',
+    '#恋愛占い',
+    '#恋愛心理',
+    '#恋愛成就',
+    '#片思い',
+    '#復縁',
+    '#本音',
+    '#引き寄せ',
+    '#運命の人',
+    '#恋愛運',
+    '#相性',
+  ], 10);
+};
+
+const getYouTubeHashtags = (theme: string) => {
+  const cleaned = cleanTagText(theme);
+  return uniqueTags([
+    `#${cleaned}`,
+    '#恋愛',
+    '#占い',
+    '#恋愛占い',
+    '#恋愛心理',
+    '#復縁',
+    '#片思い',
+    '#相性',
+  ], 5);
 };
 
 const buildTemplateBlock = (templateText: string, templateUrl: string) => {
@@ -58,6 +137,12 @@ const trimByLength = (text: string, length: string) => {
   return `${text.slice(0, max)}...`;
 };
 
+const appendHashtags = (text: string, hashtags: string[], hashtagMode: 'あり' | 'なし') => {
+  if (hashtagMode === 'なし') return text;
+  if (!hashtags.length) return text;
+  return `${text}\n\n${hashtags.join(' ')}`;
+};
+
 export const generateSNSPostContent = (
   theme: string,
   length: string,
@@ -67,10 +152,17 @@ export const generateSNSPostContent = (
   templateUrl: string,
   tiktokTemplateText: string,
   insertPosition: 'start' | 'end',
-  tiktokInsertPosition: 'start' | 'end' | 'both'
+  tiktokInsertPosition: 'start' | 'end' | 'both',
+  hashtagMode: 'あり' | 'なし'
 ) => {
   const profile = getProfileLabel(gender, age);
-  const hashtags = getHashtags(theme);
+
+  const noteHashtags = getNoteHashtags(theme);
+  const tikTokHashtags = getTikTokHashtags(theme);
+  const xHashtags = getXHashtags(theme);
+  const instagramHashtags = getInstagramHashtags(theme);
+  const youtubeHashtags = getYouTubeHashtags(theme);
+
   const hook = `【${theme}で結果が変わる人の共通点】`;
 
   const noteBase = trimByLength(`${hook}
@@ -122,9 +214,7 @@ ${theme}で結果を変える人は、
 “伝わる順番”を知っている人です。
 
 まずは1回、
-伝え方の順番を整えることから始めてみてください。
-
-${hashtags.join(' ')}`, length);
+伝え方の順番を整えることから始めてみてください。`, length);
 
   const tiktokBase = `${hook}
 
@@ -215,9 +305,7 @@ ${theme}で結果を変えたいなら、
 伝わり方も反応も大きく変わります。
 
 がんばり方を増やすより、
-まずは伝わる形を整えること。
-
-${hashtags.join(' ')}`, length);
+まずは伝わる形を整えること。`, length);
 
   const youtubeBase = trimByLength(`${hook}
 
@@ -244,17 +332,54 @@ ${theme}で結果が変わる人には共通点があります。
   const youtubeBlock = buildTemplateBlock(templateText, templateUrl);
   const tiktokBlock = buildTextOnlyTemplateBlock(tiktokTemplateText);
 
+  const noteText = appendHashtags(
+    insertBlock(noteBase, noteBlock, insertPosition),
+    noteHashtags,
+    hashtagMode
+  );
+
+  const tiktokText = appendHashtags(
+    insertBlockAdvanced(tiktokBase, tiktokBlock, tiktokInsertPosition),
+    tikTokHashtags,
+    hashtagMode
+  );
+
+  const xText = appendHashtags(
+    insertBlock(xBase, xBlock, insertPosition),
+    xHashtags,
+    hashtagMode
+  );
+
+  const instagramText = appendHashtags(
+    insertBlock(instagramBase, instagramBlock, insertPosition),
+    instagramHashtags,
+    hashtagMode
+  );
+
+  const youtubeText = appendHashtags(
+    insertBlock(youtubeBase, youtubeBlock, insertPosition),
+    youtubeHashtags,
+    hashtagMode
+  );
+
   return {
     title: hook,
-    content: insertBlock(noteBase, noteBlock, insertPosition),
-    capcutScript: insertBlockAdvanced(
-      tiktokBase,
-      tiktokBlock,
-      tiktokInsertPosition
-    ),
-    xPost: insertBlock(xBase, xBlock, insertPosition),
-    instagramPost: insertBlock(instagramBase, instagramBlock, insertPosition),
-    youtubePost: insertBlock(youtubeBase, youtubeBlock, insertPosition),
-    hashtags,
+    content: noteText,
+    capcutScript: tiktokText,
+    xPost: xText,
+    instagramPost: instagramText,
+    youtubePost: youtubeText,
+    hashtags:
+      hashtagMode === 'あり'
+        ? Array.from(
+            new Set([
+              ...noteHashtags,
+              ...tikTokHashtags,
+              ...xHashtags,
+              ...instagramHashtags,
+              ...youtubeHashtags,
+            ])
+          )
+        : [],
   };
 };
