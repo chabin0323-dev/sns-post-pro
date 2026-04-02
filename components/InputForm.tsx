@@ -22,7 +22,8 @@ interface InputFormProps {
     insertPosition: 'start' | 'end',
     tiktokInsertPosition: 'start' | 'end' | 'both',
     autoCtaEnabled: boolean,
-    scheduleTimes: string[]
+    scheduleTimes: string[],
+    hashtagMode: 'あり' | 'なし'
   ) => void;
   onCancel: () => void;
   loadingState: LoadingState;
@@ -200,6 +201,7 @@ export const InputForm: React.FC<InputFormProps> = ({
 
   const [insertPosition, setInsertPosition] = useState<'start' | 'end'>('end');
   const [tiktokInsertPosition, setTiktokInsertPosition] = useState<'start' | 'end' | 'both'>('start');
+  const [hashtagMode, setHashtagMode] = useState<'あり' | 'なし'>('あり');
 
   const [scheduleMorning, setScheduleMorning] = useState('08:00');
   const [scheduleNoon, setScheduleNoon] = useState('12:00');
@@ -227,6 +229,7 @@ export const InputForm: React.FC<InputFormProps> = ({
       tiktokTemplateText: 'history_tiktok_template_text',
       insertPosition: 'history_insert_position',
       tiktokInsertPosition: 'history_tiktok_insert_position',
+      hashtagMode: 'history_hashtag_mode',
       scheduleMorning: 'history_schedule_morning',
       scheduleNoon: 'history_schedule_noon',
       scheduleNight: 'history_schedule_night',
@@ -243,6 +246,7 @@ export const InputForm: React.FC<InputFormProps> = ({
   const [tiktokTemplateTextHistory, setTiktokTemplateTextHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokTemplateText));
   const [insertPositionHistory, setInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.insertPosition));
   const [tiktokInsertPositionHistory, setTiktokInsertPositionHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.tiktokInsertPosition));
+  const [hashtagModeHistory, setHashtagModeHistory] = useState<string[]>(() => readHistory(HISTORY_KEYS.hashtagMode));
 
   const saveAllHistories = () => {
     setThemeHistory(addHistory(HISTORY_KEYS.theme, theme));
@@ -254,6 +258,7 @@ export const InputForm: React.FC<InputFormProps> = ({
     setTiktokTemplateTextHistory(addHistory(HISTORY_KEYS.tiktokTemplateText, tiktokTemplateText));
     setInsertPositionHistory(addHistory(HISTORY_KEYS.insertPosition, insertPosition));
     setTiktokInsertPositionHistory(addHistory(HISTORY_KEYS.tiktokInsertPosition, tiktokInsertPosition));
+    setHashtagModeHistory(addHistory(HISTORY_KEYS.hashtagMode, hashtagMode));
     addHistory(HISTORY_KEYS.scheduleMorning, scheduleMorning);
     addHistory(HISTORY_KEYS.scheduleNoon, scheduleNoon);
     addHistory(HISTORY_KEYS.scheduleNight, scheduleNight);
@@ -319,7 +324,8 @@ export const InputForm: React.FC<InputFormProps> = ({
       insertPosition,
       tiktokInsertPosition,
       autoCtaEnabled,
-      scheduleTimes
+      scheduleTimes,
+      hashtagMode
     );
   };
 
@@ -468,7 +474,7 @@ export const InputForm: React.FC<InputFormProps> = ({
         <div className="space-y-4">
           <SectionButton
             title="投稿設定"
-            subtitle="性別・年代・文字数"
+            subtitle="性別・年代・文字数・ハッシュタグ"
             isOpen={openBasic}
             onClick={() => setOpenBasic(!openBasic)}
             className="bg-gray-100 border-gray-200"
@@ -524,6 +530,21 @@ export const InputForm: React.FC<InputFormProps> = ({
                 items={lengthHistory}
                 onSelect={setLength}
                 onDelete={(value) => setLengthHistory(removeHistory(HISTORY_KEYS.length, value))}
+              />
+
+              <select
+                value={hashtagMode}
+                onChange={(e) => setHashtagMode(e.target.value as 'あり' | 'なし')}
+                className="w-full p-3 rounded-xl border"
+              >
+                <option value="あり">ハッシュタグあり</option>
+                <option value="なし">ハッシュタグなし</option>
+              </select>
+              <HistoryChips
+                title="ハッシュタグ履歴"
+                items={hashtagModeHistory}
+                onSelect={(value) => setHashtagMode(value as 'あり' | 'なし')}
+                onDelete={(value) => setHashtagModeHistory(removeHistory(HISTORY_KEYS.hashtagMode, value))}
               />
             </div>
           )}
