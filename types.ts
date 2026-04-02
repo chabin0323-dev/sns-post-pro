@@ -79,9 +79,6 @@ export interface GeneratedPost {
 
   theme?: string;
   timestamp?: Date | string;
-
-  userName?: string;
-  birthDate?: string;
   autoCtaEnabled?: boolean;
   scheduleTimes?: string[];
 
