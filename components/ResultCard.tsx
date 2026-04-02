@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import {
   ClipboardDocumentIcon,
-  CheckIcon
+  CheckIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { GeneratedPost, AutoVideoResult } from '../types';
 import { buildAutoVideoFromScenes } from '../services/localVideoBuilder';
@@ -137,12 +138,14 @@ interface ResultCardProps {
   post: GeneratedPost;
   history?: GeneratedPost[];
   onSelectHistory?: (post: GeneratedPost) => void;
+  onDeleteHistory?: (post: GeneratedPost, index: number) => void;
 }
 
 export const ResultCard: React.FC<ResultCardProps> = ({
   post,
   history = [],
   onSelectHistory,
+  onDeleteHistory,
 }) => {
   const [copiedKey, setCopiedKey] = useState('');
   const [videoLoading, setVideoLoading] = useState(false);
@@ -360,7 +363,7 @@ export const ResultCard: React.FC<ResultCardProps> = ({
                   className="rounded-3xl border border-slate-200 bg-slate-50 p-5"
                 >
                   <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div className="space-y-2 min-w-0">
+                    <div className="space-y-2 min-w-0 flex-1">
                       <div className="text-sm font-black text-slate-800 break-all">
                         {item.title}
                       </div>
@@ -372,13 +375,25 @@ export const ResultCard: React.FC<ResultCardProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => onSelectHistory?.(item)}
-                      className="px-4 py-2 rounded-2xl bg-indigo-600 text-white font-black text-sm"
-                    >
-                      表示する
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => onSelectHistory?.(item)}
+                        className="px-4 py-2 rounded-2xl bg-indigo-600 text-white font-black text-sm"
+                      >
+                        表示する
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => onDeleteHistory?.(item, index)}
+                        className="w-10 h-10 rounded-full bg-red-50 text-red-600 border border-red-200 flex items-center justify-center"
+                        aria-label="履歴を削除"
+                        title="履歴を削除"
+                      >
+                        <XMarkIcon className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
