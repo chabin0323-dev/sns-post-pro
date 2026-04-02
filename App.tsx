@@ -132,8 +132,6 @@ const App: React.FC = () => {
     tiktokTemplateText: string,
     insertPosition: 'start' | 'end',
     tiktokInsertPosition: 'start' | 'end' | 'both',
-    userName: string,
-    birthDate: string,
     autoCtaEnabled: boolean,
     scheduleTimes: string[]
   ) => {
@@ -156,7 +154,7 @@ const App: React.FC = () => {
 
       const buzzScript = generateBuzzScriptPack(theme, autoCtaEnabled);
       const trendPack = generateTrendPack(theme);
-      const ideaPack = generateInfiniteIdeaPack(theme, userName, birthDate);
+      const ideaPack = generateInfiniteIdeaPack(theme);
       const schedulePack = generateSchedulePack(scheduleTimes, theme);
       const postPackage = buildPostPackage(theme, base.hashtags, autoCtaEnabled);
       const buzzAnalysis = analyzeBuzzFromHistory(theme, generatedHistory);
@@ -166,8 +164,6 @@ const App: React.FC = () => {
         ...base,
         theme,
         timestamp: new Date().toISOString(),
-        userName,
-        birthDate,
         autoCtaEnabled,
         scheduleTimes,
         buzzScript,
