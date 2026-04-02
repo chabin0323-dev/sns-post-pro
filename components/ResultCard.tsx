@@ -8,7 +8,7 @@ import { GeneratedPost } from '../types';
 type ChannelBlock = {
   labels: string[];
   text: string;
-  theme: 'light' | 'dark' | 'sky' | 'pink' | 'red' | 'amber' | 'violet';
+  theme: 'light' | 'dark' | 'sky' | 'pink' | 'red' | 'amber' | 'violet' | 'emerald';
 };
 
 const normalizeText = (text: string) => text.trim();
@@ -20,17 +20,29 @@ const groupChannels = (post: GeneratedPost): ChannelBlock[] => {
     { label: 'X', text: post.xPost, theme: 'sky' as const },
     { label: 'Instagram', text: post.instagramPost, theme: 'pink' as const },
     { label: 'YouTube', text: post.youtubePost, theme: 'red' as const },
-    { label: '記事', text: post.article || '', theme: 'amber' as const },
-    { label: '誘導文', text: post.cta || '', theme: 'violet' as const },
-    { label: 'サムネコピー', text: post.thumbnail || '', theme: 'amber' as const },
-    { label: 'CapCut台本', text: post.capcutTemplate || '', theme: 'dark' as const },
-    { label: 'プロフィール文', text: post.profile || '', theme: 'sky' as const },
-    { label: 'note誘導文', text: post.noteLead || '', theme: 'pink' as const },
-    {
-      label: '1週間テンプレ',
-      text: Array.isArray(post.weeklyTemplates) ? post.weeklyTemplates.join('\n') : '',
-      theme: 'violet' as const
-    }
+    { label: 'AIバズ台本', text: post.buzzScript?.fullScript || '', theme: 'amber' as const },
+    { label: 'トレンド取得', text: post.trendPack ? [
+      `トレンド風タイトル：${post.trendPack.generatedTrendTitle}`,
+      `キーワード：${post.trendPack.trendKeywords.join(' / ')}`,
+      `フック：${post.trendPack.hookPatterns.join(' / ')}`,
+      `構成：${post.trendPack.structureTemplates.join(' / ')}`
+    ].join('\n') : '', theme: 'violet' as const },
+    { label: 'ネタ無限生成', text: post.ideaPack ? [
+      post.ideaPack.fortuneSummary,
+      '',
+      post.ideaPack.loveStory,
+      '',
+      ...post.ideaPack.endlessIdeas.map((item, index) => `${index + 1}. ${item}`)
+    ].join('\n') : '', theme: 'emerald' as const },
+    { label: '投稿データ', text: post.postPackage?.readyToPostText || '', theme: 'amber' as const },
+    { label: 'バズ分析', text: post.buzzAnalysis ? [
+      `スコア：${post.buzzAnalysis.score}`,
+      `強み：${post.buzzAnalysis.strengths.join(' / ')}`,
+      `弱点：${post.buzzAnalysis.weakPoints.join(' / ') || 'なし'}`,
+      `最適化：${post.buzzAnalysis.optimizationNext.join(' / ')}`,
+      `履歴テーマ：${post.buzzAnalysis.topThemesFromHistory.join(' / ') || 'なし'}`,
+      `履歴フック：${post.buzzAnalysis.topHookPatternsFromHistory.join(' / ') || 'なし'}`
+    ].join('\n') : '', theme: 'violet' as const },
   ].filter((item) => normalizeText(item.text) !== '');
 
   const grouped = new Map<string, ChannelBlock>();
@@ -93,6 +105,12 @@ const themeClassMap = {
     badge: 'bg-white text-violet-700 border-violet-100',
     text: 'text-slate-700 bg-white/70 border-violet-100',
     button: 'bg-violet-500 hover:bg-violet-600 text-white shadow-violet-200'
+  },
+  emerald: {
+    wrap: 'bg-emerald-50 border-emerald-100',
+    badge: 'bg-white text-emerald-700 border-emerald-100',
+    text: 'text-slate-700 bg-white/70 border-emerald-100',
+    button: 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-200'
   }
 };
 
@@ -122,20 +140,6 @@ export const ResultCard: React.FC<ResultCardProps> = ({
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 pb-20">
-      {typeof post.buzzScore === 'number' && post.buzzScore > 0 && (
-        <div className="rounded-[32px] border border-emerald-200 bg-emerald-50 p-6 shadow-lg">
-          <div className="flex items-center justify-between gap-4 flex-wrap">
-            <div>
-              <div className="text-xs font-black tracking-[0.2em] text-emerald-600 uppercase">Buzz Check</div>
-              <div className="text-3xl font-black text-emerald-700 mt-1">{post.buzzScore}点</div>
-            </div>
-            <div className="text-sm font-bold text-emerald-700">
-              ギャップ・断定・数字・感情ワード・ストーリーを反映
-            </div>
-          </div>
-        </div>
-      )}
-
       {groupedBlocks.map((block, index) => {
         const themeClasses = themeClassMap[block.theme];
         const copyKey = `${block.labels.join('-')}-${index}`;
@@ -186,6 +190,81 @@ export const ResultCard: React.FC<ResultCardProps> = ({
         );
       })}
 
+      {post.buzzScript?.scenes?.length ? (
+        <div className="rounded-[40px] shadow-2xl overflow-hidden border bg-white border-slate-100">
+          <div className="p-8 md:p-10 space-y-6">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <div className="text-[11px] font-black tracking-[0.2em] text-slate-400 uppercase">Auto Video</div>
+                <h3 className="text-2xl font-black text-slate-800 mt-2">記事 → 動画 自動変換</h3>
+              </div>
+              {post.autoVideo?.videoDataUrl && (
+                <a
+                  href={post.autoVideo.videoDataUrl}
+                  download={`${post.theme || 'tiktok-auto-video'}.webm`}
+                  className="px-5 py-3 rounded-2xl bg-black text-white font-black"
+                >
+                  動画を保存
+                </a>
+              )}
+            </div>
+
+            {post.autoVideo?.videoDataUrl ? (
+              <video
+                controls
+                className="w-full rounded-3xl bg-black"
+                src={post.autoVideo.videoDataUrl}
+              />
+            ) : (
+              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6 font-bold text-slate-600">
+                動画プレビューを生成できない環境です。シーン画像と台本は生成済みです。
+              </div>
+            )}
+
+            {post.autoVideo?.sceneImages?.length ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {post.autoVideo.sceneImages.map((src, index) => (
+                  <img
+                    key={`${src}-${index}`}
+                    src={src}
+                    alt={`scene-${index + 1}`}
+                    className="w-full rounded-2xl border border-slate-200"
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
+      {post.schedulePack?.length ? (
+        <div className="rounded-[40px] shadow-2xl overflow-hidden border bg-white border-slate-100">
+          <div className="p-8 md:p-10 space-y-6">
+            <div>
+              <div className="text-[11px] font-black tracking-[0.2em] text-slate-400 uppercase">Schedule</div>
+              <h3 className="text-2xl font-black text-slate-800 mt-2">投稿スケジュール</h3>
+            </div>
+
+            <div className="space-y-3">
+              {post.schedulePack.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="font-black text-slate-800">{item.label}</div>
+                    <div className="text-sm text-slate-500">{item.time} / {item.outputTitle}</div>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-700 font-black text-xs">
+                    {item.status}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {history.length > 0 && (
         <div className="rounded-[40px] shadow-2xl overflow-hidden border bg-white border-slate-100">
           <div className="p-8 md:p-10 space-y-6">
@@ -206,49 +285,20 @@ export const ResultCard: React.FC<ResultCardProps> = ({
                         {item.title}
                       </div>
                       <div className="text-xs text-slate-500 font-bold">
-                        {item.theme || 'テーマ未設定'} / {item.generatedLength || '300文字'} /{' '}
-                        {item.generatedGender || '指定なし'} / {item.generatedAge || '指定なし'}
+                        {item.theme || 'テーマ未設定'}
                       </div>
                       <div className="text-xs text-slate-400">
-                        {item.timestamp
-                          ? new Date(item.timestamp).toLocaleString('ja-JP')
-                          : ''}
+                        {item.timestamp ? new Date(item.timestamp).toLocaleString('ja-JP') : ''}
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => onSelectHistory?.(item)}
-                        className="px-4 py-2 rounded-2xl bg-indigo-600 text-white font-black text-sm"
-                      >
-                        表示する
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleCopy(
-                            [
-                              item.article || '',
-                              item.cta || '',
-                              item.thumbnail || '',
-                              item.capcutTemplate || '',
-                              item.profile || '',
-                              item.noteLead || '',
-                              Array.isArray(item.weeklyTemplates)
-                                ? item.weeklyTemplates.join('\n')
-                                : ''
-                            ]
-                              .filter(Boolean)
-                              .join('\n\n'),
-                            `history-${index}`
-                          )
-                        }
-                        className="px-4 py-2 rounded-2xl bg-slate-800 text-white font-black text-sm"
-                      >
-                        追加生成まとめコピー
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => onSelectHistory?.(item)}
+                      className="px-4 py-2 rounded-2xl bg-indigo-600 text-white font-black text-sm"
+                    >
+                      表示する
+                    </button>
                   </div>
                 </div>
               ))}
