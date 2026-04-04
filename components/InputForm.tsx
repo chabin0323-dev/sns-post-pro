@@ -4,7 +4,8 @@ import type {
   InputFormProps,
   Platform,
   InsertPosition,
-  TiktokInsertPosition
+  TiktokInsertPosition,
+  LengthMode
 } from '../types';
 
 const ALL_PLATFORMS: Platform[] = ['TikTok', 'X', 'note', 'Instagram', 'YouTube'];
@@ -357,11 +358,13 @@ export default function InputForm({
               <select
                 style={inputStyle}
                 value={value.lengthMode}
-                onChange={(e) => setField('lengthMode', e.target.value as GenerateInput['lengthMode'])}
+                onChange={(e) => setField('lengthMode', Number(e.target.value) as LengthMode)}
               >
-                <option value="短め">短め</option>
-                <option value="標準">標準</option>
-                <option value="長め">長め</option>
+                <option value={100}>100文字</option>
+                <option value={200}>200文字</option>
+                <option value={300}>300文字</option>
+                <option value={400}>400文字</option>
+                <option value={500}>500文字</option>
               </select>
             </div>
           </div>
