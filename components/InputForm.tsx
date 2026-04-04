@@ -1,19 +1,19 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import type { GenerateInput, InputFormProps, Platform } from '../types';
 
 const ALL_PLATFORMS: Platform[] = ['TikTok', 'X', 'note', 'Instagram', 'YouTube'];
 
 const THEME_PRESETS = [
   '恋愛',
+  '告白',
+  '復縁',
+  '片想い',
   '美容',
   '副業',
   '集客',
   'ダイエット',
   'SNS運用',
-  '子育て',
-  'スピリチュアル',
-  '占い',
-  'ビジネス'
+  '占い'
 ];
 
 const TARGET_PRESETS = [
@@ -29,61 +29,54 @@ const TARGET_PRESETS = [
   '在宅ワーカー'
 ];
 
-const cardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.14)',
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: '0 10px 30px rgba(0,0,0,0.15)',
-  backdropFilter: 'blur(10px)'
+const outerCard: React.CSSProperties = {
+  background: 'linear-gradient(135deg, rgba(247,240,249,0.92), rgba(235,248,250,0.92))',
+  border: '1px solid rgba(181, 191, 255, 0.55)',
+  borderRadius: 28,
+  padding: 24,
+  boxShadow: '0 10px 28px rgba(69, 86, 160, 0.10)'
 };
 
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: 13,
-  marginBottom: 8,
-  fontWeight: 700,
-  color: '#f5f7ff'
+const sectionTitle: React.CSSProperties = {
+  fontSize: 15,
+  fontWeight: 800,
+  color: '#12223d',
+  marginBottom: 10
 };
 
-const inputStyle: React.CSSProperties = {
+const softInput: React.CSSProperties = {
   width: '100%',
-  padding: '14px 16px',
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.12)',
-  background: 'rgba(12,16,35,0.78)',
-  color: '#fff',
+  padding: '16px 18px',
+  borderRadius: 18,
+  border: '1.5px solid #bfc9ff',
+  background: '#ffffff',
+  color: '#16233b',
   outline: 'none',
-  fontSize: 14,
+  fontSize: 15,
   boxSizing: 'border-box'
 };
 
-const buttonBase: React.CSSProperties = {
+const ghostChip: React.CSSProperties = {
+  border: '1px solid #d1d8e6',
+  background: '#ffffff',
+  color: '#263b59',
+  borderRadius: 999,
+  padding: '10px 14px',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontWeight: 700,
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 8
+};
+
+const actionBtn: React.CSSProperties = {
   border: 'none',
-  borderRadius: 14,
+  borderRadius: 16,
   padding: '14px 18px',
   fontWeight: 800,
   cursor: 'pointer',
   fontSize: 14
-};
-
-const chipStyle: React.CSSProperties = {
-  border: '1px solid rgba(255,255,255,0.12)',
-  background: 'rgba(255,255,255,0.08)',
-  color: '#fff',
-  borderRadius: 999,
-  padding: '8px 12px',
-  cursor: 'pointer',
-  fontSize: 12,
-  fontWeight: 700
-};
-
-const suggestionBoxStyle: React.CSSProperties = {
-  marginTop: 8,
-  padding: 10,
-  borderRadius: 14,
-  border: '1px solid rgba(255,255,255,0.1)',
-  background: 'rgba(255,255,255,0.05)'
 };
 
 export default function InputForm({
@@ -97,6 +90,8 @@ export default function InputForm({
   onApplyThemeSuggestion,
   onApplyTargetSuggestion
 }: InputFormProps) {
+  const [themeMode, setThemeMode] = useState<'suggestion' | 'history'>('suggestion');
+
   const setField = <K extends keyof GenerateInput>(key: K, fieldValue: GenerateInput[K]) => {
     onChange({
       ...value,
@@ -117,355 +112,289 @@ export default function InputForm({
   };
 
   const themeSuggestions = useMemo(() => {
-    const merged = [...themeHistory, ...THEME_PRESETS];
+    const merged = [...THEME_PRESETS, ...themeHistory];
     const unique = Array.from(new Set(merged.map((x) => x.trim()).filter(Boolean)));
     const keyword = value.theme.trim();
 
-    if (!keyword) {
-      return unique.slice(0, 8);
-    }
+    if (!keyword) return unique.slice(0, 8);
 
-    return unique
-      .filter((item) => item.toLowerCase().includes(keyword.toLowerCase()))
-      .slice(0, 8);
+    return unique.filter((item) => item.includes(keyword)).slice(0, 8);
   }, [themeHistory, value.theme]);
 
+  const themeHistoryList = useMemo(() => {
+    return Array.from(new Set(themeHistory.map((x) => x.trim()).filter(Boolean))).slice(0, 8);
+  }, [themeHistory]);
+
   const targetSuggestions = useMemo(() => {
-    const merged = [...targetHistory, ...TARGET_PRESETS];
+    const merged = [...TARGET_PRESETS, ...targetHistory];
     const unique = Array.from(new Set(merged.map((x) => x.trim()).filter(Boolean)));
     const keyword = value.target.trim();
 
-    if (!keyword) {
-      return unique.slice(0, 8);
-    }
+    if (!keyword) return unique.slice(0, 8);
 
-    return unique
-      .filter((item) => item.toLowerCase().includes(keyword.toLowerCase()))
-      .slice(0, 8);
+    return unique.filter((item) => item.includes(keyword)).slice(0, 8);
   }, [targetHistory, value.target]);
 
+  const visibleThemeChips = themeMode === 'suggestion' ? themeSuggestions : themeHistoryList;
+
   return (
-    <div style={{ ...cardStyle }}>
-      <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 26, fontWeight: 900, color: '#fff', marginBottom: 8 }}>
-          TikTok特化・SNS投稿生成
-        </div>
-        <div style={{ color: 'rgba(255,255,255,0.78)', fontSize: 14, lineHeight: 1.6 }}>
-          バズ率とCVを意識した投稿を、APIなしロジックで即生成します。
+    <div style={outerCard}>
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ ...sectionTitle, fontSize: 18, marginBottom: 0 }}>投稿テーマ</div>
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div />
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            type="button"
+            onClick={() => setThemeMode('suggestion')}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: themeMode === 'suggestion' ? '#5b58ff' : '#6d7e99',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontSize: 13
+            }}
+          >
+            提案
+          </button>
+          <button
+            type="button"
+            onClick={() => setThemeMode('history')}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              color: themeMode === 'history' ? '#5b58ff' : '#6d7e99',
+              fontWeight: 800,
+              cursor: 'pointer',
+              fontSize: 13
+            }}
+          >
+            履歴
+          </button>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gap: 16 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div>
-            <label style={labelStyle}>投稿テーマプルダウン</label>
-            <select
-              style={inputStyle}
-              value={THEME_PRESETS.includes(value.theme) ? value.theme : ''}
-              onChange={(e) => {
-                if (e.target.value) setField('theme', e.target.value);
-              }}
-            >
-              <option value="">選択してください</option>
-              {THEME_PRESETS.map((theme) => (
-                <option key={theme} value={theme}>
-                  {theme}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>投稿テーマ入力</label>
-            <input
-              style={inputStyle}
-              value={value.theme}
-              onChange={(e) => setField('theme', e.target.value)}
-              placeholder="例：恋愛 / 副業 / 美容 / 集客 / ダイエット"
-            />
-            {themeSuggestions.length > 0 && (
-              <div style={suggestionBoxStyle}>
-                <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 12, marginBottom: 8 }}>
-                  テーマ候補
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {themeSuggestions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      style={chipStyle}
-                      onClick={() => onApplyThemeSuggestion(item)}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label style={labelStyle}>前回使った投稿テーマ</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {themeHistory.length === 0 ? (
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>まだ履歴がありません</div>
-            ) : (
-              themeHistory.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  style={chipStyle}
-                  onClick={() => onApplyThemeSuggestion(item)}
-                >
-                  {item}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div>
-            <label style={labelStyle}>ターゲットプルダウン</label>
-            <select
-              style={inputStyle}
-              value={TARGET_PRESETS.includes(value.target) ? value.target : ''}
-              onChange={(e) => {
-                if (e.target.value) setField('target', e.target.value);
-              }}
-            >
-              <option value="">選択してください</option>
-              {TARGET_PRESETS.map((target) => (
-                <option key={target} value={target}>
-                  {target}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>ターゲット入力</label>
-            <input
-              style={inputStyle}
-              value={value.target}
-              onChange={(e) => setField('target', e.target.value)}
-              placeholder="例：30代女性 / 初心者 / 片想い中の人 / 個人事業主"
-            />
-            {targetSuggestions.length > 0 && (
-              <div style={suggestionBoxStyle}>
-                <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 12, marginBottom: 8 }}>
-                  ターゲット候補
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                  {targetSuggestions.map((item) => (
-                    <button
-                      key={item}
-                      type="button"
-                      style={chipStyle}
-                      onClick={() => onApplyTargetSuggestion(item)}
-                    >
-                      {item}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div>
-          <label style={labelStyle}>前回使ったターゲット</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {targetHistory.length === 0 ? (
-              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>まだ履歴がありません</div>
-            ) : (
-              targetHistory.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  style={chipStyle}
-                  onClick={() => onApplyTargetSuggestion(item)}
-                >
-                  {item}
-                </button>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
-          <div>
-            <label style={labelStyle}>性別</label>
-            <select
-              style={inputStyle}
-              value={value.gender}
-              onChange={(e) => setField('gender', e.target.value as GenerateInput['gender'])}
-            >
-              <option value="指定なし">指定なし</option>
-              <option value="男性向け">男性向け</option>
-              <option value="女性向け">女性向け</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>文章の強さ</label>
-            <select
-              style={inputStyle}
-              value={value.tone}
-              onChange={(e) => setField('tone', e.target.value as GenerateInput['tone'])}
-            >
-              <option value="soft">やさしめ</option>
-              <option value="normal">標準</option>
-              <option value="strong">強め</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>目的</label>
-            <select
-              style={inputStyle}
-              value={value.goal}
-              onChange={(e) => setField('goal', e.target.value as GenerateInput['goal'])}
-            >
-              <option value="engagement">反応を取る</option>
-              <option value="sales">販売導線</option>
-              <option value="followers">フォロワー増加</option>
-              <option value="lead">保存・見込み客獲得</option>
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label style={labelStyle}>対応SNS</label>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {ALL_PLATFORMS.map((platform) => {
-              const active = value.platforms.includes(platform);
-              return (
-                <button
-                  key={platform}
-                  type="button"
-                  onClick={() => togglePlatform(platform)}
-                  style={{
-                    ...buttonBase,
-                    padding: '12px 16px',
-                    background: active
-                      ? 'linear-gradient(135deg, #8b5cf6, #ec4899)'
-                      : 'rgba(255,255,255,0.08)',
-                    color: '#fff',
-                    border: active
-                      ? '1px solid rgba(255,255,255,0.18)'
-                      : '1px solid rgba(255,255,255,0.1)'
-                  }}
-                >
-                  {platform}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div>
-            <label style={labelStyle}>ハッシュタグ</label>
-            <select
-              style={inputStyle}
-              value={value.hashtagMode}
-              onChange={(e) => {
-                const mode = e.target.value as GenerateInput['hashtagMode'];
-                setField('hashtagMode', mode);
-                setField('includeHashtags', mode !== 'none');
-              }}
-            >
-              <option value="auto">自動最適化あり</option>
-              <option value="none">なし</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>固定タグ</label>
-            <select
-              style={inputStyle}
-              value={value.includeFixedHashtags ? 'yes' : 'no'}
-              onChange={(e) => setField('includeFixedHashtags', e.target.value === 'yes')}
-            >
-              <option value="yes">あり</option>
-              <option value="no">なし</option>
-            </select>
-          </div>
-        </div>
-
-        <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ fontWeight: 900, color: '#fff', marginBottom: 12 }}>CTA設定</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>CTA強度</label>
-              <select
-                style={inputStyle}
-                value={value.ctaMode}
-                onChange={(e) => setField('ctaMode', e.target.value as GenerateInput['ctaMode'])}
-              >
-                <option value="soft">やさしい</option>
-                <option value="normal">標準</option>
-                <option value="strong">強め</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={labelStyle}>緊急性</label>
-              <select
-                style={inputStyle}
-                value={value.includeUrgency ? 'yes' : 'no'}
-                onChange={(e) => setField('includeUrgency', e.target.value === 'yes')}
-              >
-                <option value="yes">あり</option>
-                <option value="no">なし</option>
-              </select>
-            </div>
-
-            <div>
-              <label style={labelStyle}>特典訴求</label>
-              <select
-                style={inputStyle}
-                value={value.includeOffer ? 'yes' : 'no'}
-                onChange={(e) => setField('includeOffer', e.target.value === 'yes')}
-              >
-                <option value="yes">あり</option>
-                <option value="no">なし</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
-          <button
-            type="button"
-            onClick={onGenerate}
-            disabled={loading}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ position: 'relative' }}>
+          <input
+            style={{ ...softInput, paddingLeft: 48 }}
+            value={value.theme}
+            onChange={(e) => setField('theme', e.target.value)}
+            placeholder="投稿テーマを入力"
+          />
+          <span
             style={{
-              ...buttonBase,
-              background: 'linear-gradient(135deg, #7c3aed, #ec4899)',
-              color: '#fff',
-              minHeight: 54
+              position: 'absolute',
+              left: 16,
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: 16
             }}
           >
-            {loading ? '生成中...' : '投稿を生成する'}
-          </button>
+            ✨
+          </span>
+        </div>
+      </div>
 
-          <button
-            type="button"
-            onClick={onGenerateTrends}
+      <div
+        style={{
+          border: '1px solid #d4dae7',
+          background: 'rgba(255,255,255,0.48)',
+          borderRadius: 20,
+          padding: 16,
+          marginBottom: 18
+        }}
+      >
+        <div style={{ color: '#54657f', fontSize: 13, fontWeight: 800, marginBottom: 12 }}>
+          ● {themeMode === 'suggestion' ? 'テーマ提案' : 'テーマ履歴'}
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {visibleThemeChips.length === 0 ? (
+            <div style={{ color: '#7b8ba5', fontSize: 13 }}>まだありません</div>
+          ) : (
+            visibleThemeChips.map((item) => (
+              <button
+                key={item}
+                type="button"
+                style={ghostChip}
+                onClick={() => onApplyThemeSuggestion(item)}
+              >
+                {item}
+                <span style={{ color: '#90a0b8' }}>×</span>
+              </button>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <div style={sectionTitle}>ターゲット</div>
+          <input
+            style={softInput}
+            value={value.target}
+            onChange={(e) => setField('target', e.target.value)}
+            placeholder="ターゲットを入力"
+          />
+        </div>
+
+        <div>
+          <div style={sectionTitle}>ターゲット候補</div>
+          <div
             style={{
-              ...buttonBase,
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              minHeight: 54,
-              border: '1px solid rgba(255,255,255,0.12)'
+              minHeight: 56,
+              border: '1.5px solid #bfc9ff',
+              borderRadius: 18,
+              background: '#ffffff',
+              padding: 10,
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 8
             }}
           >
-            トレンド生成
-          </button>
+            {targetSuggestions.slice(0, 4).map((item) => (
+              <button
+                key={item}
+                type="button"
+                style={{ ...ghostChip, padding: '8px 12px' }}
+                onClick={() => onApplyTargetSuggestion(item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
         </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <div style={sectionTitle}>性別</div>
+          <select
+            style={softInput}
+            value={value.gender}
+            onChange={(e) => setField('gender', e.target.value as GenerateInput['gender'])}
+          >
+            <option value="指定なし">指定なし</option>
+            <option value="男性向け">男性向け</option>
+            <option value="女性向け">女性向け</option>
+          </select>
+        </div>
+
+        <div>
+          <div style={sectionTitle}>文章の強さ</div>
+          <select
+            style={softInput}
+            value={value.tone}
+            onChange={(e) => setField('tone', e.target.value as GenerateInput['tone'])}
+          >
+            <option value="soft">やさしめ</option>
+            <option value="normal">標準</option>
+            <option value="strong">強め</option>
+          </select>
+        </div>
+
+        <div>
+          <div style={sectionTitle}>目的</div>
+          <select
+            style={softInput}
+            value={value.goal}
+            onChange={(e) => setField('goal', e.target.value as GenerateInput['goal'])}
+          >
+            <option value="engagement">反応を取る</option>
+            <option value="sales">販売導線</option>
+            <option value="followers">フォロワー増加</option>
+            <option value="lead">保存・見込み客獲得</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 14 }}>
+        <div style={sectionTitle}>対応SNS</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {ALL_PLATFORMS.map((platform) => {
+            const active = value.platforms.includes(platform);
+            return (
+              <button
+                key={platform}
+                type="button"
+                onClick={() => togglePlatform(platform)}
+                style={{
+                  ...actionBtn,
+                  padding: '12px 16px',
+                  background: active ? 'linear-gradient(135deg, #8b5cf6, #ec4899)' : '#ffffff',
+                  color: active ? '#ffffff' : '#31445f',
+                  border: active ? 'none' : '1px solid #d2dae8'
+                }}
+              >
+                {platform}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+        <div>
+          <div style={sectionTitle}>ハッシュタグ</div>
+          <select
+            style={softInput}
+            value={value.hashtagMode}
+            onChange={(e) => {
+              const mode = e.target.value as GenerateInput['hashtagMode'];
+              setField('hashtagMode', mode);
+              setField('includeHashtags', mode !== 'none');
+            }}
+          >
+            <option value="auto">自動最適化あり</option>
+            <option value="none">なし</option>
+          </select>
+        </div>
+
+        <div>
+          <div style={sectionTitle}>固定タグ</div>
+          <select
+            style={softInput}
+            value={value.includeFixedHashtags ? 'yes' : 'no'}
+            onChange={(e) => setField('includeFixedHashtags', e.target.value === 'yes')}
+          >
+            <option value="yes">あり</option>
+            <option value="no">なし</option>
+          </select>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={loading}
+          style={{
+            ...actionBtn,
+            background: 'linear-gradient(135deg, #7c3aed, #ec4899)',
+            color: '#fff',
+            minHeight: 54
+          }}
+        >
+          {loading ? '生成中...' : '投稿を生成する'}
+        </button>
+
+        <button
+          type="button"
+          onClick={onGenerateTrends}
+          style={{
+            ...actionBtn,
+            background: '#ffffff',
+            color: '#31445f',
+            border: '1px solid #d2dae8',
+            minHeight: 54
+          }}
+        >
+          トレンド生成
+        </button>
       </div>
     </div>
   );
