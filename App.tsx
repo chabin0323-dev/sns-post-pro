@@ -4,9 +4,9 @@ import ResultCard from './components/ResultCard';
 import { generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_history_v5';
-const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v5';
-const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v5';
+const STORAGE_KEY = 'sns_post_generator_history_v6';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v6';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v6';
 
 const defaultInput: GenerateInput = {
   theme: '',
@@ -23,10 +23,9 @@ const defaultInput: GenerateInput = {
   includeOffer: true
 };
 
-const shellStyle: React.CSSProperties = {
+const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background:
-    'radial-gradient(circle at top left, rgba(124,58,237,0.28), transparent 30%), radial-gradient(circle at top right, rgba(236,72,153,0.22), transparent 28%), linear-gradient(180deg, #0b1020 0%, #11182f 100%)',
+  background: 'linear-gradient(180deg, #f7f7fb 0%, #eef4fb 100%)',
   padding: '24px 16px 60px'
 };
 
@@ -36,13 +35,11 @@ const containerStyle: React.CSSProperties = {
   margin: '0 auto'
 };
 
-const glassStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(255,255,255,0.1)',
+const darkPanel: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #0b1020 0%, #11182f 100%)',
   borderRadius: 24,
   padding: 20,
-  boxShadow: '0 12px 35px rgba(0,0,0,0.18)',
-  backdropFilter: 'blur(12px)'
+  boxShadow: '0 12px 35px rgba(0,0,0,0.18)'
 };
 
 export default function App() {
@@ -101,8 +98,6 @@ export default function App() {
     }
   }, [targetHistory]);
 
-  const latestItem = useMemo(() => history[0] ?? null, [history]);
-
   const summary = useMemo(() => {
     const total = history.length;
     const tiktokCount = history.filter((x) => x.platform === 'TikTok').length;
@@ -113,6 +108,8 @@ export default function App() {
 
     return { total, tiktokCount, avgBuzz };
   }, [history]);
+
+  const latestItem = useMemo(() => history[0] ?? null, [history]);
 
   const saveRecentValue = (value: string, prevList: string[]) => {
     const clean = value.trim();
@@ -156,22 +153,21 @@ export default function App() {
   };
 
   return (
-    <div style={shellStyle}>
+    <div style={pageStyle}>
       <div style={containerStyle}>
-        <div style={{ marginBottom: 22, color: '#fff' }}>
-          <div style={{ fontSize: 34, fontWeight: 900, marginBottom: 10 }}>
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 34, fontWeight: 900, color: '#15233d', marginBottom: 10 }}>
             SNS投稿生成アプリ
           </div>
-          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.7 }}>
-            TikTok中心で、X / note / Instagram / YouTubeまで一括生成。
-            バズだけでなく、保存・フォロー・販売導線まで強めています。
+          <div style={{ color: '#58708f', fontSize: 15, lineHeight: 1.7 }}>
+            画像の見た目に近いテーマ欄と、TikTokの短文構成でそのままコピーできる形に戻した版です。
           </div>
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.25fr 0.75fr',
+            gridTemplateColumns: '1.1fr 0.9fr',
             gap: 18,
             alignItems: 'start'
           }}
@@ -189,33 +185,16 @@ export default function App() {
           />
 
           <div style={{ display: 'grid', gap: 16 }}>
-            <div style={glassStyle}>
+            <div style={darkPanel}>
               <div style={{ color: '#fff', fontWeight: 900, marginBottom: 14 }}>ダッシュボード</div>
 
               <MetricCard label="累計生成" value={`${summary.total}`} />
               <MetricCard label="TikTok生成数" value={`${summary.tiktokCount}`} />
               <MetricCard label="平均バズ度" value={`${summary.avgBuzz}`} />
-
-              <div
-                style={{
-                  marginTop: 16,
-                  background: 'linear-gradient(135deg, rgba(124,58,237,0.22), rgba(236,72,153,0.18))',
-                  borderRadius: 18,
-                  padding: 16,
-                  border: '1px solid rgba(255,255,255,0.1)'
-                }}
-              >
-                <div style={{ fontWeight: 900, color: '#fff', marginBottom: 8 }}>CV強化ポイント</div>
-                <div style={{ color: 'rgba(255,255,255,0.84)', fontSize: 14, lineHeight: 1.8 }}>
-                  ・最初の1文で痛みを出す<br />
-                  ・中盤で改善策を1つだけ見せる<br />
-                  ・最後に保存 or プロフ誘導を必ず入れる
-                </div>
-              </div>
             </div>
 
             {latestItem && (
-              <div style={glassStyle}>
+              <div style={darkPanel}>
                 <div style={{ color: '#fff', fontWeight: 900, marginBottom: 10 }}>最新生成</div>
                 <div style={{ color: '#fff', fontSize: 18, fontWeight: 800, lineHeight: 1.5 }}>
                   {latestItem.title}
@@ -227,14 +206,14 @@ export default function App() {
             )}
 
             {trends.length > 0 && (
-              <div style={glassStyle}>
+              <div style={darkPanel}>
                 <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>トレンド生成</div>
                 <div style={{ display: 'grid', gap: 12 }}>
                   {trends.map((trend) => (
                     <div
                       key={trend.id}
                       style={{
-                        background: 'rgba(12,16,35,0.7)',
+                        background: 'rgba(255,255,255,0.05)',
                         borderRadius: 16,
                         padding: 14
                       }}
@@ -242,7 +221,7 @@ export default function App() {
                       <div style={{ color: '#fff', fontWeight: 800, marginBottom: 6 }}>
                         {trend.title}
                       </div>
-                      <div style={{ color: '#f6d2ff', fontSize: 13, marginBottom: 6 }}>
+                      <div style={{ color: '#cfdcff', fontSize: 13, marginBottom: 6 }}>
                         Hook：{trend.hook}
                       </div>
                       <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>
@@ -257,15 +236,21 @@ export default function App() {
         </div>
 
         <div style={{ marginTop: 24 }}>
-          <div style={{ color: '#fff', fontWeight: 900, fontSize: 22, marginBottom: 14 }}>
+          <div style={{ color: '#15233d', fontWeight: 900, fontSize: 22, marginBottom: 14 }}>
             生成履歴
           </div>
 
           {history.length === 0 ? (
-            <div style={glassStyle}>
-              <div style={{ color: 'rgba(255,255,255,0.8)' }}>
-                まだ履歴がありません。上のフォームから投稿を生成してください。
-              </div>
+            <div
+              style={{
+                background: '#ffffff',
+                border: '1px solid #d8e0ef',
+                borderRadius: 20,
+                padding: 18,
+                color: '#5e728f'
+              }}
+            >
+              まだ履歴がありません。上のフォームから投稿を生成してください。
             </div>
           ) : (
             <div style={{ display: 'grid', gap: 18 }}>
@@ -288,7 +273,7 @@ function MetricCard({ label, value }: { label: string; value: string }) {
   return (
     <div
       style={{
-        background: 'rgba(12,16,35,0.7)',
+        background: 'rgba(255,255,255,0.05)',
         borderRadius: 16,
         padding: 14,
         marginBottom: 10
