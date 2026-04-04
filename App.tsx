@@ -4,11 +4,14 @@ import ResultCard from './components/ResultCard';
 import { generateIdeaPosts, generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_history_v2';
+const STORAGE_KEY = 'sns_post_generator_history_v3';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v3';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v3';
 
 const defaultInput: GenerateInput = {
   theme: '',
   target: '',
+  gender: '指定なし',
   platforms: ['TikTok'],
   tone: 'strong',
   goal: 'sales',
@@ -49,17 +52,30 @@ export default function App() {
   const [trends, setTrends] = useState<TrendIdea[]>([]);
   const [ideas, setIdeas] = useState<string[]>([]);
   const [videoPreviewId, setVideoPreviewId] = useState<string | null>(null);
+  const [themeHistory, setThemeHistory] = useState<string[]>([]);
+  const [targetHistory, setTargetHistory] = useState<string[]>([]);
 
   useEffect(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as GeneratedPost[];
-      if (Array.isArray(parsed)) {
-        setHistory(parsed);
+      if (raw) {
+        const parsed = JSON.parse(raw) as GeneratedPost[];
+        if (Array.isArray(parsed)) setHistory(parsed);
+      }
+
+      const rawTheme = localStorage.getItem(THEME_HISTORY_KEY);
+      if (rawTheme) {
+        const parsedTheme = JSON.parse(rawTheme) as string[];
+        if (Array.isArray(parsedTheme)) setThemeHistory(parsedTheme);
+      }
+
+      const rawTarget = localStorage.getItem(TARGET_HISTORY_KEY);
+      if (rawTarget) {
+        const parsedTarget = JSON.parse(rawTarget) as string[];
+        if (Array.isArray(parsedTarget)) setTargetHistory(parsedTarget);
       }
     } catch (error) {
-      console.error('history load error', error);
+      console.error('load error', error);
     }
   }, []);
 
@@ -70,6 +86,22 @@ export default function App() {
       console.error('history save error', error);
     }
   }, [history]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(THEME_HISTORY_KEY, JSON.stringify(themeHistory));
+    } catch (error) {
+      console.error('theme history save error', error);
+    }
+  }, [themeHistory]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(TARGET_HISTORY_KEY, JSON.stringify(targetHistory));
+    } catch (error) {
+      console.error('target history save error', error);
+    }
+  }, [targetHistory]);
 
   const latestItem = useMemo(() => history[0] ?? null, [history]);
 
@@ -84,12 +116,20 @@ export default function App() {
     return { total, tiktokCount, avgBuzz };
   }, [history]);
 
+  const saveRecentValue = (value: string, prevList: string[]) => {
+    const clean = value.trim();
+    if (!clean) return prevList;
+    return [clean, ...prevList.filter((x) => x !== clean)].slice(0, 8);
+  };
+
   const handleGenerate = () => {
     setLoading(true);
 
     try {
       const items = generatePosts(input);
       setHistory((prev) => [...items, ...prev]);
+      setThemeHistory((prev) => saveRecentValue(input.theme, prev));
+      setTargetHistory((prev) => saveRecentValue(input.target, prev));
     } finally {
       setLoading(false);
     }
@@ -112,6 +152,20 @@ export default function App() {
 
   const handleBuildVideo = (id: string) => {
     setVideoPreviewId(id);
+  };
+
+  const handleApplyThemeSuggestion = (theme: string) => {
+    setInput((prev) => ({
+      ...prev,
+      theme
+    }));
+  };
+
+  const handleApplyTargetSuggestion = (target: string) => {
+    setInput((prev) => ({
+      ...prev,
+      target
+    }));
   };
 
   const previewItem = history.find((x) => x.id === videoPreviewId) ?? null;
@@ -144,6 +198,10 @@ export default function App() {
             onGenerateTrends={handleGenerateTrends}
             onGenerateIdeas={handleGenerateIdeas}
             loading={loading}
+            themeHistory={themeHistory}
+            targetHistory={targetHistory}
+            onApplyThemeSuggestion={handleApplyThemeSuggestion}
+            onApplyTargetSuggestion={handleApplyTargetSuggestion}
           />
 
           <div style={{ display: 'grid', gap: 16 }}>
@@ -179,7 +237,7 @@ export default function App() {
                   {latestItem.title}
                 </div>
                 <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.76)', fontSize: 13 }}>
-                  {latestItem.platform} ／ バズ度 {latestItem.buzzScore}
+                  {latestItem.platform} ／ バズ度 {latestItem.buzzScore} ／ {latestItem.gender}
                 </div>
               </div>
             )}
@@ -214,7 +272,7 @@ export default function App() {
 
             {ideas.length > 0 && (
               <div style={glassStyle}>
-                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>ネタ生成</div>
+                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>提案</div>
                 <div style={{ display: 'grid', gap: 10 }}>
                   {ideas.map((idea, index) => (
                     <div
