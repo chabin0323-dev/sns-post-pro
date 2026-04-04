@@ -32,6 +32,15 @@ const THEME_TAGS: Record<string, string[]> = {
   占い: ['#占い', '#運勢', '#恋愛占い']
 };
 
+type ThemeScenario = {
+  title: string;
+  issue: string;
+  wrong: string;
+  truth: string;
+  action: string;
+  warning?: string;
+};
+
 function generateId(): string {
   return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -84,36 +93,16 @@ function buildHashtags(platform: Platform, input: GenerateInput): string[] {
   return Array.from(new Set([...themeTags, ...fixed])).slice(0, platform === 'TikTok' ? 6 : 5);
 }
 
-function buildHooks(themeKey: string): string[] {
-  return [
-    `実はこれ、${themeKey}のサインです`,
-    `${themeKey}で9割が間違えています`,
-    `${themeKey}で損している人の特徴`,
-    `${themeKey}がうまくいかない理由`,
-    `${themeKey}で差がつくポイント`,
-    `${themeKey}でやってはいけない行動`,
-    `${themeKey}で逆転する方法`,
-    `${themeKey}で結果が変わる人の共通点`,
-    `${themeKey}で見落としがちな事実`,
-    `${themeKey}で一番大事なこと`
-  ];
-}
-
 function targetChars(lengthMode: GenerateInput['lengthMode'], platform: Platform): number {
+  if (platform === 'TikTok') return lengthMode;
+  if (platform === 'X') return Math.min(lengthMode, 500);
+
   if (platform === 'note') {
     if (lengthMode === 100) return 700;
     if (lengthMode === 200) return 1200;
     if (lengthMode === 300) return 1800;
     if (lengthMode === 400) return 2400;
-    return 3000;
-  }
-
-  if (platform === 'X') {
-    return Math.min(lengthMode, 500);
-  }
-
-  if (platform === 'TikTok') {
-    return lengthMode;
+    return 3200;
   }
 
   return lengthMode;
@@ -124,124 +113,168 @@ function trimToChars(text: string, maxChars: number): string {
   return text.slice(0, Math.max(0, maxChars - 1)).trimEnd() + '…';
 }
 
-function buildTikTokThemeBlocks(themeKey: string, target: string): string[][] {
-  const hook = rand(buildHooks(themeKey));
+function buildThemeScenarios(themeKey: string, target: string): ThemeScenario[] {
+  switch (themeKey) {
+    case '恋愛':
+      return [
+        {
+          title: 'この行動、恋愛が終わる前兆です',
+          issue: '恋愛が急に冷める時は、目立つ喧嘩より「小さな雑さ」が増えていることが多いです。',
+          wrong: '多くの人は大きな問題だけを見ますが、本当に危ないのは返信の雑さ、会話の短さ、優先順位の低下です。',
+          truth: '恋愛が続く人は、気持ちの強さより「相手を雑に扱わないこと」を守っています。',
+          action: `${target}ほど不安で詰めたくなりますが、まずは相手の変化を冷静に見て、感情ではなく事実で判断してください。`,
+          warning: '違和感を我慢し続けるほど、後から一気に崩れやすいです。'
+        },
+        {
+          title: '恋愛で結果が変わる人の共通点',
+          issue: '恋愛が進む人は、好きの強さより順番を大事にしています。',
+          wrong: '多くの人は早く答えを欲しがりますが、それが相手の負担になることがあります。',
+          truth: '本当に大事なのは、話しやすさ、安心感、また会いたさを順番に作ることです。',
+          action: `${target}ほど結果を急ぎやすいので、まずは「この人といると楽だな」と思わせる流れを作ってください。`
+        }
+      ];
 
-  const common = [
-    [
-      hook,
-      '',
-      'これ知らないと',
-      '普通に損します',
-      '',
-      '多くの人は',
-      'ここを間違えています',
-      '',
-      'だから結果が出ません',
-      '',
-      'でも逆に',
-      'ここを変えるだけで',
-      '一気に流れが変わります',
-      '',
-      `${target}ほど`,
-      '急ぎやすいので',
-      'まずは順番を',
-      '見直してください',
-      '',
-      '今ここを変える人ほど',
-      '結果は変わりやすいです'
-    ],
-    [
-      hook,
-      '',
-      'これ気づいてますか？',
-      '',
-      'うまくいかない人は',
-      '同じパターンです',
-      '',
-      '原因は',
-      '能力不足ではなく',
-      'やり方です',
-      '',
-      '順番を変えるだけで',
-      '反応は変わります',
-      '',
-      '急ぐほど',
-      'ズレやすいので',
-      '最初の流れを',
-      '整えてください'
-    ],
-    [
-      hook,
-      '',
-      'ほとんどの人が',
-      '勘違いしています',
-      '',
-      '実はこれ',
-      '逆です',
-      '',
-      'だから失敗します',
-      '',
-      '正しくは',
-      '先にこれをやること',
-      '',
-      'それだけで',
-      '変わりやすくなります',
-      '',
-      '大事なのは',
-      '努力より順番です'
-    ]
-  ];
+    case '告白':
+      return [
+        {
+          title: '告白で失敗する人の共通点',
+          issue: '告白がうまくいかない人は、勇気が足りないのではなく、気持ちを伝える順番を間違えています。',
+          wrong: 'いきなり重い想いを伝えると、相手は嬉しいより先に驚きや負担を感じやすいです。',
+          truth: '告白前に必要なのは、安心感・会話の自然さ・一緒にいて心地いい空気です。',
+          action: `${target}ほど答えを急ぎやすいので、告白の前に「この人とまた会いたい」と思わせる流れを整えてください。`
+        },
+        {
+          title: '告白の成功率を下げるNG行動',
+          issue: '成功しない人ほど、告白の瞬間だけで逆転できると思っています。',
+          wrong: 'でも実際は、その前の会話や距離感でほとんど決まっています。',
+          truth: '告白は勝負ではなく確認に近いです。相手が受け取りやすい空気を作れているかが重要です。',
+          action: `${target}なら、まず関係を少しずつ前に進めることを優先してください。`
+        }
+      ];
 
-  const map: Record<string, string[][]> = {
-    恋愛: [[
-      hook, '', '恋愛が進む人は', '', '気持ちの強さより', '順番を大事にしています', '',
-      'いきなり答えを求めず', '', '話しやすさ', '安心感', 'また会いたさ', '',
-      'この流れを作っています', '', `${target}ほど`, '結果を急ぎやすいので', '',
-      'まずは心地よさを', '作ってください'
-    ]],
-    告白: [[
-      hook, '', '告白で失敗する人は', '勇気が足りないのではなく', '', '空気作りを', '飛ばしています', '',
-      '先に必要なのは', '安心感です', '', '話しやすい', '会いやすい', '返しやすい', '',
-      'この流れができると', '結果は変わります'
-    ]],
-    復縁: [[
-      hook, '', '復縁したい人ほど', 'すぐ連絡したくなります', '', 'でも焦るほど', '戻りにくくなります', '',
-      '必要なのは', '説得ではなく', '距離の整え直しです', '', '落ち着く', '変わる', '自然に見せる', '',
-      'この順番が大事です'
-    ]],
-    片想い: [[
-      hook, '', '片想いで苦しくなる人は', '相手の気持ちより', '不安を見ています', '',
-      '返信が少し遅いだけで', '脈なしと思いやすいです', '',
-      'でも本当に大事なのは', '積み重ねです', '', '会いやすい', '話しやすい', 'また会いたい', '',
-      'この流れを作ってください'
-    ]],
-    脈あり: [[
-      hook, '', '脈ありは', '言葉より行動に出ます', '', '返信が続く', '質問が返ってくる', '会話を終わらせない', '',
-      'これは好意の可能性が', '高いです', '', '逆に', '必要な返事だけなら', '温度は低めです'
-    ]],
-    脈なし: [[
-      hook, '', '脈なしっぽい時に', '一番やってはいけないのは', '追いすぎることです', '',
-      '相手が引いている時に', '押すほど', '距離は広がります', '',
-      '逆転したいなら', '一度引くこと', '', 'これが大事です'
-    ]],
-    浮気: [[
-      hook, '', '違和感があるなら', '気のせいではないかも', 'しれません', '', '浮気をしている人は', '',
-      'スマホを隠す', '返信が雑になる', '予定を聞かれるのを嫌がる', '',
-      'この変化が', '出やすいです', '', '言葉より行動を', '見てください'
-    ]]
-  };
+    case '復縁':
+      return [
+        {
+          title: '復縁したい人が最初にやるべきこと',
+          issue: '復縁したい人ほど、別れた直後に気持ちを伝え直したくなります。',
+          wrong: 'でも焦って連絡を重ねるほど、相手は戻るより距離を取りたくなります。',
+          truth: '復縁で最初に必要なのは、説得ではなく感情を落ち着かせる時間です。',
+          action: `${target}ほど不安で動きたくなりますが、まずは追わないこと、次に印象を整え直すこと、この順番が大切です。`
+        },
+        {
+          title: '復縁でやってはいけない行動',
+          issue: '復縁を遠ざけるのは、嫌われることより「重さ」です。',
+          wrong: '謝りすぎる、気持ちを何度も送る、返事がないのに追う。これが一番逆効果です。',
+          truth: '相手が戻りやすいのは、落ち着いた距離感と変化が見える時です。',
+          action: `${target}なら、まず未練を見せすぎないことから始めてください。`
+        }
+      ];
 
-  return [...(map[themeKey] ?? []), ...common];
+    case '片想い':
+      return [
+        {
+          title: '片想いが進まない人の特徴',
+          issue: '片想いが長引く人は、相手の気持ちより先に自分の不安を見ています。',
+          wrong: '返信が遅いだけで脈なしだと決めつけると、関係が育つ前に自分から崩れます。',
+          truth: '片想いで大事なのは、一回の反応ではなく、関係が少しずつ深くなる流れです。',
+          action: `${target}ほど答えを急ぎやすいので、まずは「会話が自然に続く関係」を作ることに集中してください。`
+        }
+      ];
+
+    case '脈あり':
+      return [
+        {
+          title: '好きな人が出している脈ありサイン',
+          issue: '脈ありは言葉より先に行動に出ます。',
+          wrong: '多くの人は優しい言葉だけを見ますが、実際に大事なのは行動の量です。',
+          truth: '返信が続く、質問が返ってくる、会話を終わらせない。これは好意の可能性が高いサインです。',
+          action: `${target}なら、言葉より行動の積み重ねを見て判断してください。`
+        }
+      ];
+
+    case '脈なし':
+      return [
+        {
+          title: '脈なしっぽい時にやってはいけないこと',
+          issue: '脈なしに見える時に一番危ないのは、焦って距離を詰めることです。',
+          wrong: '反応が弱い時に押すほど、相手はさらに引きやすくなります。',
+          truth: '逆転したいなら、まずは一度引いて、印象を整えて、軽く接点を作り直すことです。',
+          action: `${target}ほど不安で動きすぎるので、まずは追わない強さを持ってください。`
+        }
+      ];
+
+    case '浮気':
+      return [
+        {
+          title: '実はこれ、浮気のサインです',
+          issue: '浮気の違和感は、派手な証拠より先に小さな変化として出ます。',
+          wrong: '多くの人は決定的な証拠を探しますが、その前にスマホの扱い、返信の雑さ、予定の曖昧さに変化が出ます。',
+          truth: '本当に見るべきなのは言葉ではなく行動です。優しさでごまかされるほど見抜きにくくなります。',
+          action: `${target}ほど不安で見ないふりをしやすいので、違和感は放置せず、感情より事実を整理してください。`
+        }
+      ];
+
+    case '恋愛心理':
+      return [
+        {
+          title: '恋愛心理で差がつくポイント',
+          issue: '恋愛は気持ちだけで動くように見えて、実は心理の流れで大きく差がつきます。',
+          wrong: '好きだから伝わる、頑張れば届く、という考えだけでは相手は動きません。',
+          truth: '安心する、気になる、失いたくない。この順番で感情は深まりやすいです。',
+          action: `${target}に向けるなら、まず安心感を作ることを優先してください。`
+        }
+      ];
+
+    default:
+      return [
+        {
+          title: `実はこれ、${themeKey}で見落としがちな事実です`,
+          issue: `${themeKey}で結果が出ない人は、内容が悪いのではなく、伝える順番で損しています。`,
+          wrong: '多くの人は言いたいことを先に全部入れてしまいます。',
+          truth: 'でも読まれる文章は、相手が気になることから入っています。',
+          action: `${target}ほど詰め込みやすいので、まずは一文目だけ変えてください。`
+        }
+      ];
+  }
 }
 
-function applyPhraseToTikTok(blocks: string[], phrase: string, position: TiktokInsertPosition): string[] {
-  const clean = phrase.trim();
-  if (!clean) return blocks;
+function expandTikTokArticle(scenario: ThemeScenario, target: string, lengthMode: GenerateInput['lengthMode']): string {
+  const lines: string[] = [
+    scenario.title,
+    '',
+    scenario.issue,
+    '',
+    scenario.wrong,
+    '',
+    scenario.truth,
+    ''
+  ];
 
-  if (position === 'start') return [clean, '', ...blocks];
-  if (position === 'end') return [...blocks, '', clean];
-  return [clean, '', ...blocks, '', clean];
+  if (scenario.warning) {
+    lines.push(scenario.warning, '');
+  }
+
+  lines.push(
+    scenario.action,
+    '',
+    '大事なのは',
+    '感情だけで動かないこと',
+    '',
+    '順番を変えるだけで',
+    '見え方はかなり変わります'
+  );
+
+  const base = lines.join('\n');
+  return trimToChars(base, targetChars(lengthMode, 'TikTok'));
+}
+
+function applyPhraseToTikTok(text: string, phrase: string, position: TiktokInsertPosition): string {
+  const clean = phrase.trim();
+  if (!clean) return text;
+
+  if (position === 'start') return `${clean}\n\n${text}`;
+  if (position === 'end') return `${text}\n\n${clean}`;
+  return `${clean}\n\n${text}\n\n${clean}`;
 }
 
 function buildNoteXInsertText(phrase: string, url: string): string {
@@ -256,89 +289,92 @@ function applyPhraseToText(body: string, phrase: string, url: string, position: 
   return `${body}\n\n${insertText}`;
 }
 
-function expandParagraph(seed: string, themeKey: string, target: string, idx: number): string {
-  const blocks = [
-    `${themeKey}で結果が出る人は、最初から特別な才能があるわけではありません。むしろ、相手にどう伝わるかを丁寧に整えている人ほど流れを作るのが上手いです。`,
-    `${target}に向けて発信する場合も同じで、言いたいことを先に詰め込むより、最初に「自分に関係ある」と思わせる一文を置いた方が読まれやすくなります。`,
-    `特に大事なのは、相手が迷うポイントを先に見せて、そのあとで安心材料や改善策を出すことです。この順番だけでも反応率はかなり変わります。`,
-    `多くの人は内容を増やそうとして長く書きますが、実際に読まれる文章は「何を言うか」より「どの順番で出すか」の影響を強く受けます。`,
-    `だからこそ、最初の一文、途中の共感、最後の行動導線までを1セットで考える必要があります。これが整うと、同じテーマでも見られ方が変わります。`,
-    `もし今まで反応が弱かったなら、内容が悪いのではなく、入口の作り方が弱かった可能性があります。先に相手の悩みを見せるだけでも印象は変わります。`
-  ];
-
-  return `${seed}\n\n${blocks[idx % blocks.length]}`;
-}
-
 function buildNoteBody(themeKey: string, input: GenerateInput): string {
   const target = normalizeTarget(input.target);
-  const title = rand(buildHooks(themeKey));
+  const scenario = rand(buildThemeScenarios(themeKey, target));
 
-  let body = `${title}\n\n`;
+  const paragraphs: string[] = [
+    `${scenario.title}`,
+    '',
+    `${scenario.issue}`,
+    '',
+    `${scenario.wrong}`,
+    '',
+    `${scenario.truth}`,
+    '',
+    `ここで重要なのは、${themeKey}がうまくいかない理由を「気持ちが弱いから」「努力が足りないから」と考えないことです。実際には、順番や見せ方がズレているだけで、結果が変わってしまうことがとても多いです。`,
+    '',
+    `${target}に向けて言うなら、相手の反応を一回ごとに大きく判断するよりも、流れ全体を見る方がはるかに大事です。短いやり取り、空気感、優先順位、態度の変化。こういった細かい要素が積み重なって結果になります。`,
+    '',
+    `多くの人は「今すぐ答えがほしい」と思って焦ります。しかし、焦って言葉を増やすほど、相手には重く伝わりやすくなります。だからこそ、先に整えるべきなのは気持ちの量ではなく、受け取られ方です。`,
+    '',
+    `見られる文章も、進む関係も、共通しているのは入口の作り方です。最初に相手が気になることを見せる。次に共感させる。最後に行動の方向を示す。この流れがあるだけで、同じ内容でも反応は大きく変わります。`,
+    '',
+    `そして本当に差がつくのは、派手なテクニックよりも「雑に扱わないこと」です。返信の仕方、距離感、言葉の順番、そのすべてが積み重なって印象になります。`,
+    '',
+    `${scenario.action}`,
+    '',
+    `もし今まで${themeKey}で思うような結果が出ていないなら、内容を増やす前に、まず最初の一文と相手への見せ方を見直してください。それだけでも流れはかなり変わります。`
+  ];
 
-  body += `${themeKey}で反応を変えたいなら、まず見直すべきなのは内容量ではなく構成です。${target}に向けて書く場合ほど、最初の数行で「これは自分の話だ」と感じてもらえるかどうかが大きく影響します。\n\n`;
-
-  const paragraphCount =
-    input.lengthMode === 100 ? 2 :
-    input.lengthMode === 200 ? 4 :
-    input.lengthMode === 300 ? 6 :
-    input.lengthMode === 400 ? 8 : 10;
-
-  for (let i = 0; i < paragraphCount; i += 1) {
-    body = expandParagraph(body, themeKey, target, i);
-  }
-
-  body += `\n\n最後に大切なのは、読んだ人が「今すぐ1つ試してみよう」と思える終わり方にすることです。${themeKey}で成果を出している人は、派手な言葉よりも、伝わる順番を整えています。`;
-
-  return trimToChars(body, targetChars(input.lengthMode, 'note'));
+  return trimToChars(paragraphs.join('\n'), targetChars(input.lengthMode, 'note'));
 }
 
 function buildXBody(themeKey: string, input: GenerateInput): string {
   const target = normalizeTarget(input.target);
-  const base = [
-    `${themeKey}で結果が変わる人は、内容ではなく順番を整えています。`,
-    `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`,
-    `大事なのは、相手が気になること → 共感 → 改善策 の順です。`
+  const scenario = rand(buildThemeScenarios(themeKey, target));
+
+  const body = [
+    `${scenario.title}`,
+    `${scenario.issue}`,
+    `${scenario.truth}`,
+    `${scenario.action}`
   ].join('\n');
 
-  return trimToChars(base, targetChars(input.lengthMode, 'X'));
+  return trimToChars(body, targetChars(input.lengthMode, 'X'));
 }
 
-function buildBody(platform: Platform, input: GenerateInput): string {
+function buildBody(platform: Platform, input: GenerateInput): { title: string; content: string } {
   const themeKey = detectThemeKey(input.theme);
   const target = normalizeTarget(input.target);
+  const scenario = rand(buildThemeScenarios(themeKey, target));
 
   if (platform === 'TikTok') {
-    const baseBlocks = rand(buildTikTokThemeBlocks(themeKey, target));
-    const joined = baseBlocks.join('\n');
-    const trimmed = trimToChars(joined, targetChars(input.lengthMode, 'TikTok'));
-    const blocks = trimmed.split('\n');
-    const finalBlocks = applyPhraseToTikTok(blocks, input.tiktokPhrase, input.tiktokInsertPosition);
-    return finalBlocks.join('\n');
+    const tiktokContent = expandTikTokArticle(scenario, target, input.lengthMode);
+    return {
+      title: scenario.title,
+      content: applyPhraseToTikTok(tiktokContent, input.tiktokPhrase, input.tiktokInsertPosition)
+    };
   }
 
   if (platform === 'note') {
     const noteBody = buildNoteBody(themeKey, input);
-    return applyPhraseToText(noteBody, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
+    return {
+      title: scenario.title,
+      content: applyPhraseToText(noteBody, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition)
+    };
   }
 
   if (platform === 'X') {
     const xBody = buildXBody(themeKey, input);
-    return applyPhraseToText(xBody, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
+    return {
+      title: scenario.title,
+      content: applyPhraseToText(xBody, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition)
+    };
   }
 
-  const base = [
-    `${themeKey}に関連した投稿案です。`,
-    `${target}に伝わりやすい流れで作っています。`
-  ].join('\n');
-
-  return trimToChars(base, targetChars(input.lengthMode, platform));
+  const generic = `${scenario.title}\n\n${scenario.issue}\n\n${scenario.truth}\n\n${scenario.action}`;
+  return {
+    title: scenario.title,
+    content: trimToChars(generic, targetChars(input.lengthMode, platform))
+  };
 }
 
 function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: string[]) {
-  let hookPower = platform === 'TikTok' ? 92 : 78;
-  let readability = input.lengthMode <= 200 ? 90 : input.lengthMode >= 500 ? 82 : 86;
-  let curiosity = 88;
-  let conversion = input.goal === 'sales' ? 89 : 82;
+  let hookPower = platform === 'TikTok' ? 94 : 80;
+  let readability = input.lengthMode <= 200 ? 90 : input.lengthMode >= 500 ? 84 : 87;
+  let curiosity = 90;
+  let conversion = input.goal === 'sales' ? 89 : 83;
 
   if (input.ctaMode === 'strong') conversion += 3;
   if (input.includeUrgency) conversion += 3;
@@ -358,34 +394,24 @@ function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: s
     curiosity,
     conversion,
     reason: [
-      '冒頭フックを強くしています',
-      'テーマに連動した内容にしています',
-      '各SNSの決まり文を反映しています',
+      'タイトルと本文を同じテーマ設計で作っています',
+      'フック → 共感 → 本質 → 行動の流れで構成しています',
       '文字数設定に合わせて長さを調整しています'
     ]
   };
 }
 
-function buildTitle(platform: Platform, input: GenerateInput): string {
-  const theme = normalizeTheme(input.theme);
-  const target = normalizeTarget(input.target);
-
-  if (platform === 'TikTok') return `${target}向け｜${theme}で反応が変わる投稿`;
-  if (platform === 'note') return `${theme}で結果を変える考え方`;
-  if (platform === 'X') return `${theme}で差がつくポイント`;
-  return `${theme}投稿案`;
-}
-
 function buildSinglePost(platform: Platform, input: GenerateInput): GeneratedPost {
   const now = new Date().toISOString();
   const hashtags = buildHashtags(platform, input);
+  const built = buildBody(platform, input);
   const buzzAnalysis = buildBuzzAnalysis(platform, input, hashtags);
 
   return {
     id: generateId(),
     platform,
-    title: buildTitle(platform, input),
-    content: buildBody(platform, input),
+    title: built.title,
+    content: built.content,
     hashtags,
     theme: normalizeTheme(input.theme),
     target: normalizeTarget(input.target),
