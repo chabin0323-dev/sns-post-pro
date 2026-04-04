@@ -4,9 +4,9 @@ import ResultCard from './components/ResultCard';
 import { generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_history_fixed_v1';
-const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_fixed_v1';
-const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_fixed_v1';
+const STORAGE_KEY = 'sns_post_generator_final_v2';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_final_v2';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_final_v2';
 
 const defaultInput: GenerateInput = {
   theme: '',
@@ -20,7 +20,13 @@ const defaultInput: GenerateInput = {
   hashtagMode: 'auto',
   ctaMode: 'strong',
   includeUrgency: true,
-  includeOffer: true
+  includeOffer: true,
+  lengthMode: '標準',
+  noteXPhrase: '詳しくはこちら👇',
+  noteXUrl: '',
+  noteXInsertPosition: 'end',
+  tiktokPhrase: '続きはプロフィールから👇',
+  tiktokInsertPosition: 'both'
 };
 
 const pageStyle: React.CSSProperties = {
@@ -141,7 +147,7 @@ export default function App() {
             SNS投稿生成アプリ
           </div>
           <div style={{ color: '#58708f', fontSize: 15, lineHeight: 1.7 }}>
-            提案・履歴・ターゲット・性別・トレンド生成を復活しつつ、TikTok向けにバズ構造へ修正した版です。
+            文字数選択と各SNSの決まり文挿入機能を復活し、生成時に自動反映する版です。
           </div>
         </div>
 
