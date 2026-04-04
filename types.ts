@@ -20,7 +20,6 @@ export interface GeneratedPost {
   theme: string;
   target: string;
   gender: Gender;
-  cta: string;
   buzzScore: number;
   buzzAnalysis: BuzzAnalysis;
   createdAt: string;
