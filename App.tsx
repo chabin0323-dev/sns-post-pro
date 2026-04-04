@@ -1,340 +1,316 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Header } from './components/Header';
-import { InputForm } from './components/InputForm';
-import { ResultCard } from './components/ResultCard';
-import { UserGuide } from './components/UserGuide';
-import { LoadingState, GeneratedPost } from './types';
-import { generateSNSPostContent } from './services/localPostGenerator';
-import {
-  analyzeBuzzFromHistory,
-  buildPostPackage,
-  generateBuzzScriptPack,
-  generateInfiniteIdeaPack,
-  generateSchedulePack,
-  generateTrendPack,
-} from './services/tiktokAutomation';
-import { buildAutoVideoFromScenes } from './services/localVideoBuilder';
+import React, { useEffect, useMemo, useState } from 'react';
+import InputForm from './components/InputForm';
+import ResultCard from './components/ResultCard';
+import { generateIdeaPosts, generatePosts, generateTrendIdeas } from './services/localPostGenerator';
+import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'latest_generated_post';
-const GENERATED_HISTORY_KEY = 'generated_post_history_v3';
+const STORAGE_KEY = 'sns_post_generator_history_v2';
 
-const isValidSavedPost = (data: any): data is GeneratedPost => {
-  return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.title === 'string' &&
-    typeof data.content === 'string' &&
-    typeof data.capcutScript === 'string' &&
-    typeof data.xPost === 'string' &&
-    typeof data.instagramPost === 'string' &&
-    typeof data.youtubePost === 'string' &&
-    Array.isArray(data.hashtags)
-  );
+const defaultInput: GenerateInput = {
+  theme: '',
+  target: '',
+  platforms: ['TikTok'],
+  tone: 'strong',
+  goal: 'sales',
+  includeHashtags: true,
+  includeFixedHashtags: true,
+  hashtagMode: 'auto',
+  ctaMode: 'strong',
+  includeUrgency: true,
+  includeOffer: true
 };
 
-const sanitizePost = (data: any): GeneratedPost | null => {
-  if (!isValidSavedPost(data)) return null;
-  return {
-    ...data,
-    timestamp: data.timestamp ?? new Date().toISOString(),
-    autoVideo: data.autoVideo
-      ? {
-          videoDataUrl: typeof data.autoVideo.videoDataUrl === 'string' ? data.autoVideo.videoDataUrl : '',
-          videoMimeType: typeof data.autoVideo.videoMimeType === 'string' ? data.autoVideo.videoMimeType : '',
-          sceneImages: Array.isArray(data.autoVideo.sceneImages) ? data.autoVideo.sceneImages : [],
-          durationSec: typeof data.autoVideo.durationSec === 'number' ? data.autoVideo.durationSec : 0,
-        }
-      : null,
-  };
+const shellStyle: React.CSSProperties = {
+  minHeight: '100vh',
+  background:
+    'radial-gradient(circle at top left, rgba(124,58,237,0.28), transparent 30%), radial-gradient(circle at top right, rgba(236,72,153,0.22), transparent 28%), linear-gradient(180deg, #0b1020 0%, #11182f 100%)',
+  padding: '24px 16px 60px'
 };
 
-const stripHeavyVideoData = (post: GeneratedPost): GeneratedPost => {
-  return {
-    ...post,
-    autoVideo: post.autoVideo
-      ? {
-          ...post.autoVideo,
-          videoDataUrl: '',
-          sceneImages: [],
-        }
-      : null,
-  };
+const containerStyle: React.CSSProperties = {
+  width: '100%',
+  maxWidth: 1180,
+  margin: '0 auto'
 };
 
-const safeSaveToLocalStorage = (key: string, value: unknown) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (error) {
-    console.error(`localStorage save failed: ${key}`, error);
-    return false;
-  }
+const glassStyle: React.CSSProperties = {
+  background: 'rgba(255,255,255,0.06)',
+  border: '1px solid rgba(255,255,255,0.1)',
+  borderRadius: 24,
+  padding: 20,
+  boxShadow: '0 12px 35px rgba(0,0,0,0.18)',
+  backdropFilter: 'blur(12px)'
 };
 
-const readGeneratedHistory = (): GeneratedPost[] => {
-  try {
-    const raw = localStorage.getItem(GENERATED_HISTORY_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.map(sanitizePost).filter((item): item is GeneratedPost => !!item);
-  } catch {
-    return [];
-  }
-};
+export default function App() {
+  const [input, setInput] = useState<GenerateInput>(defaultInput);
+  const [history, setHistory] = useState<GeneratedPost[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [trends, setTrends] = useState<TrendIdea[]>([]);
+  const [ideas, setIdeas] = useState<string[]>([]);
+  const [videoPreviewId, setVideoPreviewId] = useState<string | null>(null);
 
-const getHistoryItemKey = (post: GeneratedPost, index?: number) =>
-  `${post.timestamp ?? 'time'}__${post.title ?? 'title'}__${post.theme ?? 'theme'}__${index ?? ''}`;
-
-const App: React.FC = () => {
-  const [currentPost, setCurrentPost] = useState<GeneratedPost | null>(() => {
+  useEffect(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (!saved) return null;
-      const parsed = JSON.parse(saved);
-      const normalized = sanitizePost(parsed);
-      if (normalized) return normalized;
-      localStorage.removeItem(STORAGE_KEY);
-      return null;
-    } catch {
-      localStorage.removeItem(STORAGE_KEY);
-      return null;
-    }
-  });
-
-  const [generatedHistory, setGeneratedHistory] = useState<GeneratedPost[]>(() => readGeneratedHistory());
-  const [loadingState, setLoadingState] = useState<LoadingState>(LoadingState.IDLE);
-  const [showGuide, setShowGuide] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-  const progressIntervalRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    if (!currentPost) return;
-
-    const lightPost = stripHeavyVideoData(currentPost);
-    const saved = safeSaveToLocalStorage(STORAGE_KEY, lightPost);
-
-    if (saved) {
-      setLastSaved(new Date());
-    }
-  }, [currentPost]);
-
-  useEffect(() => {
-    const lightHistory = generatedHistory.map(stripHeavyVideoData);
-    safeSaveToLocalStorage(GENERATED_HISTORY_KEY, lightHistory);
-  }, [generatedHistory]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (loadingState === LoadingState.LOADING) {
-        e.preventDefault();
-        e.returnValue = '入力内容が消去されますがよろしいですか？';
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as GeneratedPost[];
+      if (Array.isArray(parsed)) {
+        setHistory(parsed);
       }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [loadingState]);
-
-  const startProgress = () => {
-    setProgress(0);
-
-    if (progressIntervalRef.current) {
-      window.clearInterval(progressIntervalRef.current);
-    }
-
-    progressIntervalRef.current = window.setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 95) return prev;
-        const increment = prev < 50 ? 2 : prev < 80 ? 1 : 0.5;
-        return Math.min(prev + increment, 95);
-      });
-    }, 150);
-  };
-
-  const stopProgress = () => {
-    if (progressIntervalRef.current) {
-      window.clearInterval(progressIntervalRef.current);
-      progressIntervalRef.current = null;
-    }
-    setProgress(0);
-  };
-
-  const handleGenerate = async (
-    theme: string,
-    length: string,
-    gender: string,
-    age: string,
-    templateText: string,
-    templateUrl: string,
-    tiktokTemplateText: string,
-    insertPosition: 'start' | 'end',
-    tiktokInsertPosition: 'start' | 'end' | 'both',
-    autoCtaEnabled: boolean,
-    scheduleTimes: string[],
-    hashtagMode: 'あり' | 'なし'
-  ) => {
-    setLoadingState(LoadingState.LOADING);
-    setShowGuide(false);
-    startProgress();
-
-    try {
-      const base = generateSNSPostContent(
-        theme,
-        length,
-        gender,
-        age,
-        templateText,
-        templateUrl,
-        tiktokTemplateText,
-        insertPosition,
-        tiktokInsertPosition,
-        hashtagMode
-      );
-
-      const historyForAnalysis = generatedHistory.map(stripHeavyVideoData);
-
-      const buzzScript = generateBuzzScriptPack(theme, autoCtaEnabled);
-      const trendPack = generateTrendPack(theme);
-      const ideaPack = generateInfiniteIdeaPack(theme);
-      const schedulePack = generateSchedulePack(scheduleTimes, theme);
-      const postPackage = buildPostPackage(theme, base.hashtags, autoCtaEnabled);
-      const buzzAnalysis = analyzeBuzzFromHistory(theme, historyForAnalysis);
-      const autoVideo = null;
-
-      const result: GeneratedPost = {
-        ...base,
-        theme,
-        timestamp: new Date().toISOString(),
-        autoCtaEnabled,
-        scheduleTimes,
-        hashtagMode,
-        buzzScript,
-        trendPack,
-        ideaPack,
-        schedulePack,
-        postPackage,
-        buzzAnalysis,
-        autoVideo,
-      };
-
-      setCurrentPost(result);
-      setGeneratedHistory((prev) => [result, ...prev].slice(0, 30));
-      setLoadingState(LoadingState.SUCCESS);
     } catch (error) {
-      console.error(error);
-      setLoadingState(LoadingState.ERROR);
+      console.error('history load error', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
+    } catch (error) {
+      console.error('history save error', error);
+    }
+  }, [history]);
+
+  const latestItem = useMemo(() => history[0] ?? null, [history]);
+
+  const summary = useMemo(() => {
+    const total = history.length;
+    const tiktokCount = history.filter((x) => x.platform === 'TikTok').length;
+    const avgBuzz =
+      total > 0
+        ? Math.round(history.reduce((sum, item) => sum + item.buzzScore, 0) / total)
+        : 0;
+
+    return { total, tiktokCount, avgBuzz };
+  }, [history]);
+
+  const handleGenerate = () => {
+    setLoading(true);
+
+    try {
+      const items = generatePosts(input);
+      setHistory((prev) => [...items, ...prev]);
     } finally {
-      stopProgress();
+      setLoading(false);
     }
   };
 
-  const handleCancel = () => {
-    setLoadingState(LoadingState.IDLE);
-    stopProgress();
+  const handleGenerateTrends = () => {
+    setTrends(generateTrendIdeas(input.theme, input.target));
   };
 
-  const handleSelectHistory = (post: GeneratedPost) => {
-    setCurrentPost(post);
-    setLoadingState(LoadingState.SUCCESS);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleGenerateIdeas = () => {
+    setIdeas(generateIdeaPosts(input.theme, input.target));
   };
 
-  const handleDeleteHistory = (post: GeneratedPost, index: number) => {
-    const targetKey = getHistoryItemKey(post, index);
-
-    setGeneratedHistory((prev) => {
-      const next = prev.filter((item, i) => getHistoryItemKey(item, i) !== targetKey);
-
-      if (currentPost && getHistoryItemKey(currentPost) === getHistoryItemKey(post)) {
-        setCurrentPost(next.length > 0 ? next[0] : null);
-        if (next.length === 0) {
-          setLoadingState(LoadingState.IDLE);
-        }
-      }
-
-      return next;
-    });
+  const handleDelete = (id: string) => {
+    setHistory((prev) => prev.filter((item) => item.id !== id));
+    if (videoPreviewId === id) {
+      setVideoPreviewId(null);
+    }
   };
+
+  const handleBuildVideo = (id: string) => {
+    setVideoPreviewId(id);
+  };
+
+  const previewItem = history.find((x) => x.id === videoPreviewId) ?? null;
 
   return (
-    <div className="min-h-screen bg-black flex flex-col">
-      <Header onToggleGuide={() => setShowGuide(!showGuide)} />
+    <div style={shellStyle}>
+      <div style={containerStyle}>
+        <div style={{ marginBottom: 22, color: '#fff' }}>
+          <div style={{ fontSize: 34, fontWeight: 900, marginBottom: 10 }}>
+            SNS投稿生成アプリ
+          </div>
+          <div style={{ fontSize: 15, color: 'rgba(255,255,255,0.78)', lineHeight: 1.7 }}>
+            TikTok中心で、X / note / Instagram / YouTubeまで一括生成。
+            バズだけでなく、保存・フォロー・販売導線まで強めています。
+          </div>
+        </div>
 
-      <main className="max-w-2xl mx-auto px-4 py-16 flex flex-col gap-12 flex-grow w-full">
-        {lastSaved && (
-          <div className="fixed top-20 right-4 z-50 animate-fade-in">
-            <div className="flex items-center gap-2 bg-emerald-500/90 backdrop-blur px-3 py-1.5 rounded-full border border-emerald-400/50 shadow-lg shadow-emerald-500/20">
-              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
-              <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                Auto-Saved {lastSaved.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </span>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1.25fr 0.75fr',
+            gap: 18,
+            alignItems: 'start'
+          }}
+        >
+          <InputForm
+            value={input}
+            onChange={setInput}
+            onGenerate={handleGenerate}
+            onGenerateTrends={handleGenerateTrends}
+            onGenerateIdeas={handleGenerateIdeas}
+            loading={loading}
+          />
+
+          <div style={{ display: 'grid', gap: 16 }}>
+            <div style={glassStyle}>
+              <div style={{ color: '#fff', fontWeight: 900, marginBottom: 14 }}>ダッシュボード</div>
+
+              <MetricCard label="累計生成" value={`${summary.total}`} />
+              <MetricCard label="TikTok生成数" value={`${summary.tiktokCount}`} />
+              <MetricCard label="平均バズ度" value={`${summary.avgBuzz}`} />
+
+              <div
+                style={{
+                  marginTop: 16,
+                  background: 'linear-gradient(135deg, rgba(124,58,237,0.22), rgba(236,72,153,0.18))',
+                  borderRadius: 18,
+                  padding: 16,
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}
+              >
+                <div style={{ fontWeight: 900, color: '#fff', marginBottom: 8 }}>CV強化ポイント</div>
+                <div style={{ color: 'rgba(255,255,255,0.84)', fontSize: 14, lineHeight: 1.8 }}>
+                  ・最初の1文で痛みを出す<br />
+                  ・中盤で改善策を1つだけ見せる<br />
+                  ・最後に保存 or プロフ誘導を必ず入れる
+                </div>
+              </div>
             </div>
-          </div>
-        )}
 
-        <div className="text-center space-y-3">
-          <h2 className="text-4xl md:text-5xl font-black text-white leading-tight">
-            AIで、魅力的な
-            <br />
-            <span className="bg-clip-text text-transparent bg-gradient-to-r from-pink-500 via-yellow-400 to-purple-500">
-              TikTok投稿
-            </span>
-            を。
-          </h2>
-          <p className="text-sm md:text-base text-white/60 font-bold">
-            台本・動画・投稿データをローカルだけでまとめて自動生成
-          </p>
+            {latestItem && (
+              <div style={glassStyle}>
+                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 10 }}>最新生成</div>
+                <div style={{ color: '#fff', fontSize: 18, fontWeight: 800, lineHeight: 1.5 }}>
+                  {latestItem.title}
+                </div>
+                <div style={{ marginTop: 8, color: 'rgba(255,255,255,0.76)', fontSize: 13 }}>
+                  {latestItem.platform} ／ バズ度 {latestItem.buzzScore}
+                </div>
+              </div>
+            )}
+
+            {trends.length > 0 && (
+              <div style={glassStyle}>
+                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>トレンド生成</div>
+                <div style={{ display: 'grid', gap: 12 }}>
+                  {trends.map((trend) => (
+                    <div
+                      key={trend.id}
+                      style={{
+                        background: 'rgba(12,16,35,0.7)',
+                        borderRadius: 16,
+                        padding: 14
+                      }}
+                    >
+                      <div style={{ color: '#fff', fontWeight: 800, marginBottom: 6 }}>
+                        {trend.title}
+                      </div>
+                      <div style={{ color: '#f6d2ff', fontSize: 13, marginBottom: 6 }}>
+                        Hook：{trend.hook}
+                      </div>
+                      <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: 13 }}>
+                        理由：{trend.reason}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {ideas.length > 0 && (
+              <div style={glassStyle}>
+                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>ネタ生成</div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {ideas.map((idea, index) => (
+                    <div
+                      key={`${idea}_${index}`}
+                      style={{
+                        background: 'rgba(12,16,35,0.7)',
+                        borderRadius: 14,
+                        padding: '12px 14px',
+                        color: 'rgba(255,255,255,0.88)',
+                        fontSize: 14
+                      }}
+                    >
+                      {idea}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {previewItem && (
+              <div style={glassStyle}>
+                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>動画構成プレビュー</div>
+                <div style={{ color: '#fff', fontSize: 16, fontWeight: 800, marginBottom: 10 }}>
+                  {previewItem.videoTitle}
+                </div>
+                <div style={{ display: 'grid', gap: 10 }}>
+                  {previewItem.videoScenes.map((scene) => (
+                    <div
+                      key={scene.id}
+                      style={{
+                        background: 'rgba(12,16,35,0.72)',
+                        borderRadius: 14,
+                        padding: 12
+                      }}
+                    >
+                      <div style={{ color: '#fff', fontWeight: 800 }}>
+                        Scene {scene.id} / {scene.duration}
+                      </div>
+                      <div style={{ color: '#f6d2ff', fontSize: 13, marginTop: 4 }}>
+                        テロップ：{scene.telop}
+                      </div>
+                      <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 4 }}>
+                        映像：{scene.visual}
+                      </div>
+                      <div style={{ color: 'rgba(255,255,255,0.88)', fontSize: 13, marginTop: 4, lineHeight: 1.7 }}>
+                        ナレーション：{scene.narration}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
-        {showGuide && (
-          <div className="animate-in fade-in zoom-in duration-300">
-            <UserGuide onClose={() => setShowGuide(false)} />
+        <div style={{ marginTop: 24 }}>
+          <div style={{ color: '#fff', fontWeight: 900, fontSize: 22, marginBottom: 14 }}>
+            生成履歴
           </div>
-        )}
 
-        <InputForm
-          onGenerate={handleGenerate}
-          onCancel={handleCancel}
-          loadingState={loadingState}
-          progress={progress}
-        />
-
-        {(loadingState === LoadingState.SUCCESS || (currentPost && loadingState === LoadingState.IDLE)) && currentPost && (
-          <div className="space-y-6">
-            <ResultCard
-              post={currentPost}
-              history={generatedHistory.map(stripHeavyVideoData)}
-              onSelectHistory={handleSelectHistory}
-              onDeleteHistory={handleDeleteHistory}
-            />
-          </div>
-        )}
-
-        {loadingState === LoadingState.ERROR && (
-          <div className="p-6 bg-red-500/10 text-red-400 rounded-2xl text-center font-bold border border-red-500/20">
-            生成に失敗しました。もう一度お試しください。
-          </div>
-        )}
-      </main>
-
-      <footer className="w-full py-20 flex justify-center items-center select-none">
-        <div className="flex items-center gap-6">
-          <div className="h-px w-16 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-500 via-yellow-400 via-green-400 via-blue-500 to-purple-500 drop-shadow-[0_2px_10px_rgba(255,255,255,0.1)]">
-              Mike
-            </span>
-            <span className="text-[10px] font-black tracking-[0.2em] text-white/30 uppercase mt-1">
-              ver.5
-            </span>
-          </div>
-          <div className="h-px w-16 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+          {history.length === 0 ? (
+            <div style={glassStyle}>
+              <div style={{ color: 'rgba(255,255,255,0.8)' }}>
+                まだ履歴がありません。上のフォームから投稿を生成してください。
+              </div>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: 18 }}>
+              {history.map((item) => (
+                <ResultCard
+                  key={item.id}
+                  item={item}
+                  onDelete={handleDelete}
+                  onBuildVideo={handleBuildVideo}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      </footer>
+      </div>
     </div>
   );
-};
+}
 
-export default App;
+function MetricCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        background: 'rgba(12,16,35,0.7)',
+        borderRadius: 16,
+        padding: 14,
+        marginBottom: 10
+      }}
+    >
+      <div style={{ color: 'rgba(255,255,255,0.68)', fontSize: 13, marginBottom: 6 }}>{label}</div>
+      <div style={{ color: '#fff', fontWeight: 900, fontSize: 24 }}>{value}</div>
+    </div>
+  );
+}
