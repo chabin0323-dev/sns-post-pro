@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import type { GenerateInput, InputFormProps, Platform } from '../types';
 
 const ALL_PLATFORMS: Platform[] = ['TikTok', 'X', 'note', 'Instagram', 'YouTube'];
@@ -78,6 +78,14 @@ const chipStyle: React.CSSProperties = {
   fontWeight: 700
 };
 
+const suggestionBoxStyle: React.CSSProperties = {
+  marginTop: 8,
+  padding: 10,
+  borderRadius: 14,
+  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'rgba(255,255,255,0.05)'
+};
+
 export default function InputForm({
   value,
   onChange,
@@ -107,6 +115,34 @@ export default function InputForm({
       platforms: next.length > 0 ? next : ['TikTok']
     });
   };
+
+  const themeSuggestions = useMemo(() => {
+    const merged = [...themeHistory, ...THEME_PRESETS];
+    const unique = Array.from(new Set(merged.map((x) => x.trim()).filter(Boolean)));
+    const keyword = value.theme.trim();
+
+    if (!keyword) {
+      return unique.slice(0, 8);
+    }
+
+    return unique
+      .filter((item) => item.toLowerCase().includes(keyword.toLowerCase()))
+      .slice(0, 8);
+  }, [themeHistory, value.theme]);
+
+  const targetSuggestions = useMemo(() => {
+    const merged = [...targetHistory, ...TARGET_PRESETS];
+    const unique = Array.from(new Set(merged.map((x) => x.trim()).filter(Boolean)));
+    const keyword = value.target.trim();
+
+    if (!keyword) {
+      return unique.slice(0, 8);
+    }
+
+    return unique
+      .filter((item) => item.toLowerCase().includes(keyword.toLowerCase()))
+      .slice(0, 8);
+  }, [targetHistory, value.target]);
 
   return (
     <div style={{ ...cardStyle }}>
@@ -147,6 +183,25 @@ export default function InputForm({
               onChange={(e) => setField('theme', e.target.value)}
               placeholder="例：恋愛 / 副業 / 美容 / 集客 / ダイエット"
             />
+            {themeSuggestions.length > 0 && (
+              <div style={suggestionBoxStyle}>
+                <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 12, marginBottom: 8 }}>
+                  テーマ候補
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {themeSuggestions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      style={chipStyle}
+                      onClick={() => onApplyThemeSuggestion(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -197,6 +252,25 @@ export default function InputForm({
               onChange={(e) => setField('target', e.target.value)}
               placeholder="例：30代女性 / 初心者 / 片想い中の人 / 個人事業主"
             />
+            {targetSuggestions.length > 0 && (
+              <div style={suggestionBoxStyle}>
+                <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 12, marginBottom: 8 }}>
+                  ターゲット候補
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {targetSuggestions.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      style={chipStyle}
+                      onClick={() => onApplyTargetSuggestion(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
