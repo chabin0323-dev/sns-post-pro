@@ -69,7 +69,6 @@ export interface InputFormProps {
   onChange: (next: GenerateInput) => void;
   onGenerate: () => void;
   onGenerateTrends: () => void;
-  onGenerateIdeas: () => void;
   loading: boolean;
   themeHistory: string[];
   targetHistory: string[];
@@ -80,5 +79,4 @@ export interface InputFormProps {
 export interface ResultCardProps {
   item: GeneratedPost;
   onDelete: (id: string) => void;
-  onBuildVideo: (id: string) => void;
 }
