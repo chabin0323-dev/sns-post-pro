@@ -1,4 +1,11 @@
-import type { GenerateInput, GeneratedPost, Platform, TrendIdea } from '../types';
+import type {
+  GenerateInput,
+  GeneratedPost,
+  Platform,
+  TrendIdea,
+  InsertPosition,
+  TiktokInsertPosition
+} from '../types';
 
 const FIXED_HASHTAGS: Record<Platform, string[]> = {
   TikTok: ['#TikTok', '#おすすめ', '#おすすめにのりたい', '#バズりたい'],
@@ -92,7 +99,27 @@ function buildHooks(themeKey: string): string[] {
   ];
 }
 
-function buildTiktokPattern(themeKey: string, target: string): string[][] {
+function pickLengthBlocks(lengthMode: GenerateInput['lengthMode']) {
+  if (lengthMode === '短め') return 10;
+  if (lengthMode === '長め') return 22;
+  return 16;
+}
+
+function trimBlocks(blocks: string[], lengthMode: GenerateInput['lengthMode']) {
+  const limit = pickLengthBlocks(lengthMode);
+  const result: string[] = [];
+  let count = 0;
+
+  for (const line of blocks) {
+    result.push(line);
+    if (line !== '') count += 1;
+    if (count >= limit) break;
+  }
+
+  return result;
+}
+
+function buildThemeBlocks(themeKey: string, target: string): string[][] {
   const hook = rand(buildHooks(themeKey));
 
   const common = [
@@ -116,7 +143,8 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
       'まずは順番を',
       '見直してください',
       '',
-      '続きはプロフィールから👇'
+      '今ここを変える人ほど',
+      '結果は変わりやすいです'
     ],
     [
       hook,
@@ -133,7 +161,10 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
       '順番を変えるだけで',
       '反応は変わります',
       '',
-      '続きはプロフィールから👇'
+      '急ぐほど',
+      'ズレやすいので',
+      '最初の流れを',
+      '整えてください'
     ],
     [
       hook,
@@ -152,16 +183,18 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
       'それだけで',
       '変わりやすくなります',
       '',
-      '続きはプロフィールから👇'
+      '大事なのは',
+      '努力より順番です'
     ]
   ];
 
-  const themeSpecific: Record<string, string[][]> = {
+  const map: Record<string, string[][]> = {
     恋愛: [
       [
         hook,
         '',
         '恋愛が進む人は',
+        '',
         '気持ちの強さより',
         '順番を大事にしています',
         '',
@@ -177,9 +210,7 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '結果を急ぎやすいので',
         '',
         'まずは心地よさを',
-        '作ってください',
-        '',
-        '続きはプロフィールから👇'
+        '作ってください'
       ]
     ],
     告白: [
@@ -200,9 +231,7 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '返しやすい',
         '',
         'この流れができると',
-        '結果は変わります',
-        '',
-        '続きはプロフィールから👇'
+        '結果は変わります'
       ]
     ],
     復縁: [
@@ -223,9 +252,7 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '変わる',
         '自然に見せる',
         '',
-        'この順番が大事です',
-        '',
-        '続きはプロフィールから👇'
+        'この順番が大事です'
       ]
     ],
     片想い: [
@@ -246,10 +273,7 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '話しやすい',
         'また会いたい',
         '',
-        'この流れを',
-        '作ってください',
-        '',
-        '続きはプロフィールから👇'
+        'この流れを作ってください'
       ]
     ],
     脈あり: [
@@ -268,9 +292,7 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '',
         '逆に',
         '必要な返事だけなら',
-        '温度は低めです',
-        '',
-        '続きはプロフィールから👇'
+        '温度は低めです'
       ]
     ],
     脈なし: [
@@ -288,9 +310,7 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '逆転したいなら',
         '一度引くこと',
         '',
-        'これが大事です',
-        '',
-        '続きはプロフィールから👇'
+        'これが大事です'
       ]
     ],
     浮気: [
@@ -311,14 +331,36 @@ function buildTiktokPattern(themeKey: string, target: string): string[][] {
         '出やすいです',
         '',
         '言葉より行動を',
-        '見てください',
-        '',
-        '続きはプロフィールから👇'
+        '見てください'
       ]
     ]
   };
 
-  return [...(themeSpecific[themeKey] ?? []), ...common];
+  return [...(map[themeKey] ?? []), ...common];
+}
+
+function applyPhraseToTikTok(blocks: string[], phrase: string, position: TiktokInsertPosition): string[] {
+  if (!phrase.trim()) return blocks;
+
+  if (position === 'start') {
+    return [phrase, '', ...blocks];
+  }
+
+  if (position === 'end') {
+    return [...blocks, '', phrase];
+  }
+
+  return [phrase, '', ...blocks, '', phrase];
+}
+
+function applyPhraseToNoteX(body: string, phrase: string, url: string, position: InsertPosition): string {
+  const cleanPhrase = phrase.trim();
+  const cleanUrl = url.trim();
+  const insertText = [cleanPhrase, cleanUrl].filter(Boolean).join('\n');
+
+  if (!insertText) return body;
+  if (position === 'start') return `${insertText}\n\n${body}`;
+  return `${body}\n\n${insertText}`;
 }
 
 function buildBody(platform: Platform, input: GenerateInput): string {
@@ -326,32 +368,32 @@ function buildBody(platform: Platform, input: GenerateInput): string {
   const target = normalizeTarget(input.target);
 
   if (platform === 'TikTok') {
-    return rand(buildTiktokPattern(themeKey, target)).join('\n');
+    const baseBlocks = rand(buildThemeBlocks(themeKey, target));
+    const sizedBlocks = trimBlocks(baseBlocks, input.lengthMode);
+    const finalBlocks = applyPhraseToTikTok(sizedBlocks, input.tiktokPhrase, input.tiktokInsertPosition);
+    return finalBlocks.join('\n');
   }
 
-  if (platform === 'X') {
-    return [
-      `${themeKey}で結果が変わる人は、内容ではなく順番を整えています。`,
-      `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`
-    ].join('\n');
+  const base = platform === 'X'
+    ? [
+        `${themeKey}で結果が変わる人は、内容ではなく順番を整えています。`,
+        `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`
+      ].join('\n')
+    : [
+        `${themeKey}で反応を変えたいなら、最初の一文を見直してください。`,
+        `${target}に届く発信は、説明より先に「自分ごと」と思わせる流れがあります。`
+      ].join('\n\n');
+
+  if (platform === 'X' || platform === 'note') {
+    return applyPhraseToNoteX(base, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
   }
 
-  if (platform === 'note') {
-    return [
-      `${themeKey}で反応を変えたいなら、最初の一文を見直してください。`,
-      `${target}に届く発信は、説明より先に「自分ごと」と思わせる流れがあります。`
-    ].join('\n\n');
-  }
-
-  return [
-    `${themeKey}に関連した投稿案です。`,
-    `${target}に伝わりやすい流れで作っています。`
-  ].join('\n');
+  return base;
 }
 
 function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: string[]) {
   let hookPower = platform === 'TikTok' ? 92 : 78;
-  let readability = 86;
+  let readability = input.lengthMode === '短め' ? 90 : input.lengthMode === '長め' ? 82 : 86;
   let curiosity = 88;
   let conversion = input.goal === 'sales' ? 89 : 82;
 
@@ -375,7 +417,8 @@ function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: s
     reason: [
       '冒頭フックを強くしています',
       '短文改行で最後まで読まれやすくしています',
-      'テーマに連動した内容にしています'
+      'テーマに連動した内容にしています',
+      'SNSごとの決まり文を自動挿入しています'
     ]
   };
 }
