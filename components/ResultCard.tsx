@@ -1,44 +1,43 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ResultCardProps } from '../types';
 
-const cardStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.14)',
-  borderRadius: 22,
-  padding: 20,
-  boxShadow: '0 12px 35px rgba(0,0,0,0.18)',
-  backdropFilter: 'blur(10px)'
+const shell: React.CSSProperties = {
+  background: 'linear-gradient(180deg, #071225 0%, #09172b 100%)',
+  border: '1px solid rgba(94, 126, 184, 0.35)',
+  borderRadius: 18,
+  padding: 16,
+  boxShadow: '0 10px 28px rgba(0,0,0,0.22)'
 };
 
-const pillStyle: React.CSSProperties = {
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: 6,
-  padding: '8px 12px',
-  borderRadius: 999,
-  fontSize: 12,
-  fontWeight: 800,
-  background: 'rgba(255,255,255,0.1)',
-  color: '#fff',
-  border: '1px solid rgba(255,255,255,0.1)'
+const inner: React.CSSProperties = {
+  background: '#071120',
+  border: '1px solid rgba(79, 108, 160, 0.35)',
+  borderRadius: 16,
+  padding: 14
 };
 
 export default function ResultCard({ item, onDelete }: ResultCardProps) {
-  return (
-    <div style={cardStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
-        <div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 10 }}>
-            <span style={pillStyle}>{item.platform}</span>
-            <span style={pillStyle}>バズ度 {item.buzzScore}</span>
-          </div>
+  const [copied, setCopied] = useState(false);
 
-          <div style={{ fontSize: 22, fontWeight: 900, color: '#fff', lineHeight: 1.4 }}>
-            {item.title}
-          </div>
-          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.68)', marginTop: 6 }}>
-            テーマ：{item.theme} ／ ターゲット：{item.target} ／ {item.gender}
-          </div>
+  const handleCopy = async () => {
+    const text = item.hashtags.length > 0
+      ? `${item.content}\n\n${item.hashtags.join(' ')}`
+      : item.content;
+
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch (error) {
+      console.error('copy failed', error);
+    }
+  };
+
+  return (
+    <div style={shell}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ color: '#dbe8ff', fontSize: 13, fontWeight: 800 }}>
+          {item.platform} ／ {item.theme} ／ {item.target}
         </div>
 
         <button
@@ -46,11 +45,8 @@ export default function ResultCard({ item, onDelete }: ResultCardProps) {
           onClick={() => onDelete(item.id)}
           style={{
             border: 'none',
-            background: 'rgba(255,255,255,0.08)',
-            color: '#fff',
-            width: 38,
-            height: 38,
-            borderRadius: 999,
+            background: 'transparent',
+            color: '#9fb2d7',
             cursor: 'pointer',
             fontSize: 18,
             fontWeight: 800
@@ -60,99 +56,52 @@ export default function ResultCard({ item, onDelete }: ResultCardProps) {
         </button>
       </div>
 
-      <div style={{ marginTop: 18, display: 'grid', gap: 16 }}>
-        <div style={{ background: 'rgba(12,16,35,0.72)', borderRadius: 16, padding: 16 }}>
-          <div style={{ color: '#fff', fontWeight: 900, marginBottom: 10 }}>投稿本文</div>
-          <textarea
-            readOnly
-            value={item.content}
-            style={{
-              width: '100%',
-              minHeight: 260,
-              resize: 'vertical',
-              borderRadius: 14,
-              border: '1px solid rgba(255,255,255,0.12)',
-              background: 'rgba(255,255,255,0.04)',
-              color: 'rgba(255,255,255,0.94)',
-              padding: 14,
-              boxSizing: 'border-box',
-              fontSize: 14,
-              lineHeight: 1.8,
-              outline: 'none'
-            }}
-          />
+      <div style={inner}>
+        <div
+          style={{
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            color: '#ffffff',
+            fontSize: 14,
+            lineHeight: 1.9,
+            fontWeight: 700
+          }}
+        >
+          {item.content}
         </div>
 
         {item.hashtags.length > 0 && (
-          <div style={{ background: 'rgba(12,16,35,0.72)', borderRadius: 16, padding: 16 }}>
-            <div style={{ color: '#fff', fontWeight: 900, marginBottom: 10 }}>ハッシュタグ</div>
-            <textarea
-              readOnly
-              value={item.hashtags.join(' ')}
-              style={{
-                width: '100%',
-                minHeight: 90,
-                resize: 'vertical',
-                borderRadius: 14,
-                border: '1px solid rgba(255,255,255,0.12)',
-                background: 'rgba(255,255,255,0.04)',
-                color: 'rgba(255,255,255,0.94)',
-                padding: 14,
-                boxSizing: 'border-box',
-                fontSize: 14,
-                lineHeight: 1.8,
-                outline: 'none'
-              }}
-            />
+          <div
+            style={{
+              marginTop: 16,
+              color: '#d6e3ff',
+              fontSize: 13,
+              lineHeight: 1.8,
+              fontWeight: 700
+            }}
+          >
+            {item.hashtags.join(' ')}
           </div>
         )}
-
-        <div style={{ background: 'rgba(12,16,35,0.72)', borderRadius: 16, padding: 16 }}>
-          <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>バズ分析</div>
-
-          <div style={{ display: 'grid', gap: 10 }}>
-            <ScoreRow label="フック力" value={item.buzzAnalysis.hookPower} />
-            <ScoreRow label="読みやすさ" value={item.buzzAnalysis.readability} />
-            <ScoreRow label="興味引き" value={item.buzzAnalysis.curiosity} />
-            <ScoreRow label="CV導線" value={item.buzzAnalysis.conversion} />
-          </div>
-
-          <div style={{ marginTop: 12, color: 'rgba(255,255,255,0.86)', fontSize: 13, lineHeight: 1.7 }}>
-            {item.buzzAnalysis.reason.map((r, i) => (
-              <div key={i}>・{r}</div>
-            ))}
-          </div>
-        </div>
       </div>
-    </div>
-  );
-}
 
-function ScoreRow({ label, value }: { label: string; value: number }) {
-  return (
-    <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fff', fontSize: 13, marginBottom: 6 }}>
-        <span>{label}</span>
-        <strong>{value}</strong>
-      </div>
-      <div
+      <button
+        type="button"
+        onClick={handleCopy}
         style={{
           width: '100%',
-          height: 10,
-          borderRadius: 999,
-          background: 'rgba(255,255,255,0.08)',
-          overflow: 'hidden'
+          marginTop: 14,
+          border: '1px solid rgba(119, 145, 194, 0.35)',
+          background: 'rgba(255,255,255,0.04)',
+          color: '#ffffff',
+          borderRadius: 12,
+          padding: '14px 16px',
+          fontWeight: 800,
+          cursor: 'pointer'
         }}
       >
-        <div
-          style={{
-            width: `${value}%`,
-            height: '100%',
-            borderRadius: 999,
-            background: 'linear-gradient(135deg, #8b5cf6, #ec4899)'
-          }}
-        />
-      </div>
+        {copied ? 'コピーしました' : '📋 TikTokとしてコピー'}
+      </button>
     </div>
   );
 }
