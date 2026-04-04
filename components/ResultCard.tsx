@@ -123,28 +123,6 @@ export default function ResultCard({ item, onDelete }: ResultCardProps) {
             ))}
           </div>
         </div>
-
-        <div style={{ background: 'rgba(12,16,35,0.72)', borderRadius: 16, padding: 16 }}>
-          <div style={{ color: '#fff', fontWeight: 900, marginBottom: 10 }}>CapCut用構成</div>
-          <textarea
-            readOnly
-            value={item.capcutScript}
-            style={{
-              width: '100%',
-              minHeight: 180,
-              resize: 'vertical',
-              borderRadius: 14,
-              border: '1px solid rgba(255,255,255,0.12)',
-              background: 'rgba(255,255,255,0.04)',
-              color: 'rgba(255,255,255,0.94)',
-              padding: 14,
-              boxSizing: 'border-box',
-              fontSize: 14,
-              lineHeight: 1.8,
-              outline: 'none'
-            }}
-          />
-        </div>
       </div>
     </div>
   );
