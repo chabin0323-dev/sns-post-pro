@@ -99,27 +99,32 @@ function buildHooks(themeKey: string): string[] {
   ];
 }
 
-function pickLengthBlocks(lengthMode: GenerateInput['lengthMode']) {
-  if (lengthMode === '短め') return 10;
-  if (lengthMode === '長め') return 22;
-  return 16;
-}
-
-function trimBlocks(blocks: string[], lengthMode: GenerateInput['lengthMode']) {
-  const limit = pickLengthBlocks(lengthMode);
-  const result: string[] = [];
-  let count = 0;
-
-  for (const line of blocks) {
-    result.push(line);
-    if (line !== '') count += 1;
-    if (count >= limit) break;
+function targetChars(lengthMode: GenerateInput['lengthMode'], platform: Platform): number {
+  if (platform === 'note') {
+    if (lengthMode === 100) return 700;
+    if (lengthMode === 200) return 1200;
+    if (lengthMode === 300) return 1800;
+    if (lengthMode === 400) return 2400;
+    return 3000;
   }
 
-  return result;
+  if (platform === 'X') {
+    return Math.min(lengthMode, 500);
+  }
+
+  if (platform === 'TikTok') {
+    return lengthMode;
+  }
+
+  return lengthMode;
 }
 
-function buildThemeBlocks(themeKey: string, target: string): string[][] {
+function trimToChars(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  return text.slice(0, Math.max(0, maxChars - 1)).trimEnd() + '…';
+}
+
+function buildTikTokThemeBlocks(themeKey: string, target: string): string[][] {
   const hook = rand(buildHooks(themeKey));
 
   const common = [
@@ -251,42 +256,87 @@ function applyPhraseToText(body: string, phrase: string, url: string, position: 
   return `${body}\n\n${insertText}`;
 }
 
+function expandParagraph(seed: string, themeKey: string, target: string, idx: number): string {
+  const blocks = [
+    `${themeKey}で結果が出る人は、最初から特別な才能があるわけではありません。むしろ、相手にどう伝わるかを丁寧に整えている人ほど流れを作るのが上手いです。`,
+    `${target}に向けて発信する場合も同じで、言いたいことを先に詰め込むより、最初に「自分に関係ある」と思わせる一文を置いた方が読まれやすくなります。`,
+    `特に大事なのは、相手が迷うポイントを先に見せて、そのあとで安心材料や改善策を出すことです。この順番だけでも反応率はかなり変わります。`,
+    `多くの人は内容を増やそうとして長く書きますが、実際に読まれる文章は「何を言うか」より「どの順番で出すか」の影響を強く受けます。`,
+    `だからこそ、最初の一文、途中の共感、最後の行動導線までを1セットで考える必要があります。これが整うと、同じテーマでも見られ方が変わります。`,
+    `もし今まで反応が弱かったなら、内容が悪いのではなく、入口の作り方が弱かった可能性があります。先に相手の悩みを見せるだけでも印象は変わります。`
+  ];
+
+  return `${seed}\n\n${blocks[idx % blocks.length]}`;
+}
+
+function buildNoteBody(themeKey: string, input: GenerateInput): string {
+  const target = normalizeTarget(input.target);
+  const title = rand(buildHooks(themeKey));
+
+  let body = `${title}\n\n`;
+
+  body += `${themeKey}で反応を変えたいなら、まず見直すべきなのは内容量ではなく構成です。${target}に向けて書く場合ほど、最初の数行で「これは自分の話だ」と感じてもらえるかどうかが大きく影響します。\n\n`;
+
+  const paragraphCount =
+    input.lengthMode === 100 ? 2 :
+    input.lengthMode === 200 ? 4 :
+    input.lengthMode === 300 ? 6 :
+    input.lengthMode === 400 ? 8 : 10;
+
+  for (let i = 0; i < paragraphCount; i += 1) {
+    body = expandParagraph(body, themeKey, target, i);
+  }
+
+  body += `\n\n最後に大切なのは、読んだ人が「今すぐ1つ試してみよう」と思える終わり方にすることです。${themeKey}で成果を出している人は、派手な言葉よりも、伝わる順番を整えています。`;
+
+  return trimToChars(body, targetChars(input.lengthMode, 'note'));
+}
+
+function buildXBody(themeKey: string, input: GenerateInput): string {
+  const target = normalizeTarget(input.target);
+  const base = [
+    `${themeKey}で結果が変わる人は、内容ではなく順番を整えています。`,
+    `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`,
+    `大事なのは、相手が気になること → 共感 → 改善策 の順です。`
+  ].join('\n');
+
+  return trimToChars(base, targetChars(input.lengthMode, 'X'));
+}
+
 function buildBody(platform: Platform, input: GenerateInput): string {
   const themeKey = detectThemeKey(input.theme);
   const target = normalizeTarget(input.target);
 
   if (platform === 'TikTok') {
-    const baseBlocks = rand(buildThemeBlocks(themeKey, target));
-    const sizedBlocks = trimBlocks(baseBlocks, input.lengthMode);
-    const finalBlocks = applyPhraseToTikTok(sizedBlocks, input.tiktokPhrase, input.tiktokInsertPosition);
+    const baseBlocks = rand(buildTikTokThemeBlocks(themeKey, target));
+    const joined = baseBlocks.join('\n');
+    const trimmed = trimToChars(joined, targetChars(input.lengthMode, 'TikTok'));
+    const blocks = trimmed.split('\n');
+    const finalBlocks = applyPhraseToTikTok(blocks, input.tiktokPhrase, input.tiktokInsertPosition);
     return finalBlocks.join('\n');
   }
 
-  const base = platform === 'X'
-    ? [
-        `${themeKey}で結果が変わる人は、内容ではなく順番を整えています。`,
-        `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`
-      ].join('\n')
-    : platform === 'note'
-    ? [
-        `${themeKey}で反応を変えたいなら、最初の一文を見直してください。`,
-        `${target}に届く発信は、説明より先に「自分ごと」と思わせる流れがあります。`
-      ].join('\n\n')
-    : [
-        `${themeKey}に関連した投稿案です。`,
-        `${target}に伝わりやすい流れで作っています。`
-      ].join('\n');
-
-  if (platform === 'X' || platform === 'note') {
-    return applyPhraseToText(base, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
+  if (platform === 'note') {
+    const noteBody = buildNoteBody(themeKey, input);
+    return applyPhraseToText(noteBody, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
   }
 
-  return base;
+  if (platform === 'X') {
+    const xBody = buildXBody(themeKey, input);
+    return applyPhraseToText(xBody, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
+  }
+
+  const base = [
+    `${themeKey}に関連した投稿案です。`,
+    `${target}に伝わりやすい流れで作っています。`
+  ].join('\n');
+
+  return trimToChars(base, targetChars(input.lengthMode, platform));
 }
 
 function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: string[]) {
   let hookPower = platform === 'TikTok' ? 92 : 78;
-  let readability = input.lengthMode === '短め' ? 90 : input.lengthMode === '長め' ? 82 : 86;
+  let readability = input.lengthMode <= 200 ? 90 : input.lengthMode >= 500 ? 82 : 86;
   let curiosity = 88;
   let conversion = input.goal === 'sales' ? 89 : 82;
 
@@ -309,9 +359,9 @@ function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: s
     conversion,
     reason: [
       '冒頭フックを強くしています',
-      '短文改行で最後まで読まれやすくしています',
       'テーマに連動した内容にしています',
-      '各SNSの決まり文を反映しています'
+      '各SNSの決まり文を反映しています',
+      '文字数設定に合わせて長さを調整しています'
     ]
   };
 }
