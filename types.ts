@@ -11,21 +11,12 @@ export interface BuzzAnalysis {
   reason: string[];
 }
 
-export interface VideoScene {
-  id: number;
-  duration: string;
-  visual: string;
-  telop: string;
-  narration: string;
-}
-
 export interface GeneratedPost {
   id: string;
   platform: Platform;
   title: string;
   content: string;
   hashtags: string[];
-  capcutScript: string;
   theme: string;
   target: string;
   gender: Gender;
@@ -35,10 +26,6 @@ export interface GeneratedPost {
   createdAt: string;
   updatedAt: string;
   status: 'draft' | 'ready' | 'posted';
-  videoTitle: string;
-  videoScenes: VideoScene[];
-  videoDescription: string;
-  thumbnailText: string;
 }
 
 export interface GenerateInput {
