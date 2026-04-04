@@ -2,7 +2,7 @@ export type Platform = 'TikTok' | 'X' | 'note' | 'Instagram' | 'YouTube';
 export type Gender = '指定なし' | '男性向け' | '女性向け';
 export type InsertPosition = 'start' | 'end';
 export type TiktokInsertPosition = 'start' | 'end' | 'both';
-export type LengthMode = '短め' | '標準' | '長め';
+export type LengthMode = 100 | 200 | 300 | 400 | 500;
 
 export interface BuzzAnalysis {
   score: number;
