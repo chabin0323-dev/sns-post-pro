@@ -3,6 +3,32 @@ import type { GenerateInput, InputFormProps, Platform } from '../types';
 
 const ALL_PLATFORMS: Platform[] = ['TikTok', 'X', 'note', 'Instagram', 'YouTube'];
 
+const THEME_PRESETS = [
+  '恋愛',
+  '美容',
+  '副業',
+  '集客',
+  'ダイエット',
+  'SNS運用',
+  '子育て',
+  'スピリチュアル',
+  '占い',
+  'ビジネス'
+];
+
+const TARGET_PRESETS = [
+  '初心者',
+  '30代女性',
+  '40代女性',
+  '20代男性',
+  '個人事業主',
+  '副業初心者',
+  '片想い中の人',
+  'ママ層',
+  '経営者',
+  '在宅ワーカー'
+];
+
 const cardStyle: React.CSSProperties = {
   background: 'rgba(255,255,255,0.08)',
   border: '1px solid rgba(255,255,255,0.14)',
@@ -41,13 +67,28 @@ const buttonBase: React.CSSProperties = {
   fontSize: 14
 };
 
+const chipStyle: React.CSSProperties = {
+  border: '1px solid rgba(255,255,255,0.12)',
+  background: 'rgba(255,255,255,0.08)',
+  color: '#fff',
+  borderRadius: 999,
+  padding: '8px 12px',
+  cursor: 'pointer',
+  fontSize: 12,
+  fontWeight: 700
+};
+
 export default function InputForm({
   value,
   onChange,
   onGenerate,
   onGenerateTrends,
   onGenerateIdeas,
-  loading
+  loading,
+  themeHistory,
+  targetHistory,
+  onApplyThemeSuggestion,
+  onApplyTargetSuggestion
 }: InputFormProps) {
   const setField = <K extends keyof GenerateInput>(key: K, fieldValue: GenerateInput[K]) => {
     onChange({
@@ -80,24 +121,146 @@ export default function InputForm({
       </div>
 
       <div style={{ display: 'grid', gap: 16 }}>
-        <div>
-          <label style={labelStyle}>投稿テーマ</label>
-          <input
-            style={inputStyle}
-            value={value.theme}
-            onChange={(e) => setField('theme', e.target.value)}
-            placeholder="例：恋愛 / 副業 / 美容 / 集客 / ダイエット"
-          />
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>投稿テーマプルダウン</label>
+            <select
+              style={inputStyle}
+              value={THEME_PRESETS.includes(value.theme) ? value.theme : ''}
+              onChange={(e) => {
+                if (e.target.value) setField('theme', e.target.value);
+              }}
+            >
+              <option value="">選択してください</option>
+              {THEME_PRESETS.map((theme) => (
+                <option key={theme} value={theme}>
+                  {theme}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>投稿テーマ入力</label>
+            <input
+              style={inputStyle}
+              value={value.theme}
+              onChange={(e) => setField('theme', e.target.value)}
+              placeholder="例：恋愛 / 副業 / 美容 / 集客 / ダイエット"
+            />
+          </div>
         </div>
 
         <div>
-          <label style={labelStyle}>ターゲット</label>
-          <input
-            style={inputStyle}
-            value={value.target}
-            onChange={(e) => setField('target', e.target.value)}
-            placeholder="例：30代女性 / 初心者 / 片想い中の人 / 個人事業主"
-          />
+          <label style={labelStyle}>最近使った投稿テーマ履歴</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {themeHistory.length === 0 ? (
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>まだ履歴がありません</div>
+            ) : (
+              themeHistory.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  style={chipStyle}
+                  onClick={() => onApplyThemeSuggestion(item)}
+                >
+                  {item}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>ターゲットプルダウン</label>
+            <select
+              style={inputStyle}
+              value={TARGET_PRESETS.includes(value.target) ? value.target : ''}
+              onChange={(e) => {
+                if (e.target.value) setField('target', e.target.value);
+              }}
+            >
+              <option value="">選択してください</option>
+              {TARGET_PRESETS.map((target) => (
+                <option key={target} value={target}>
+                  {target}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>ターゲット入力</label>
+            <input
+              style={inputStyle}
+              value={value.target}
+              onChange={(e) => setField('target', e.target.value)}
+              placeholder="例：30代女性 / 初心者 / 片想い中の人 / 個人事業主"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label style={labelStyle}>最近使ったターゲット履歴</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            {targetHistory.length === 0 ? (
+              <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>まだ履歴がありません</div>
+            ) : (
+              targetHistory.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  style={chipStyle}
+                  onClick={() => onApplyTargetSuggestion(item)}
+                >
+                  {item}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 14 }}>
+          <div>
+            <label style={labelStyle}>性別</label>
+            <select
+              style={inputStyle}
+              value={value.gender}
+              onChange={(e) => setField('gender', e.target.value as GenerateInput['gender'])}
+            >
+              <option value="指定なし">指定なし</option>
+              <option value="男性向け">男性向け</option>
+              <option value="女性向け">女性向け</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>文章の強さ</label>
+            <select
+              style={inputStyle}
+              value={value.tone}
+              onChange={(e) => setField('tone', e.target.value as GenerateInput['tone'])}
+            >
+              <option value="soft">やさしめ</option>
+              <option value="normal">標準</option>
+              <option value="strong">強め</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={labelStyle}>目的</label>
+            <select
+              style={inputStyle}
+              value={value.goal}
+              onChange={(e) => setField('goal', e.target.value as GenerateInput['goal'])}
+            >
+              <option value="engagement">反応を取る</option>
+              <option value="sales">販売導線</option>
+              <option value="followers">フォロワー増加</option>
+              <option value="lead">保存・見込み客獲得</option>
+            </select>
+          </div>
         </div>
 
         <div>
@@ -126,35 +289,6 @@ export default function InputForm({
                 </button>
               );
             })}
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div>
-            <label style={labelStyle}>文章の強さ</label>
-            <select
-              style={inputStyle}
-              value={value.tone}
-              onChange={(e) => setField('tone', e.target.value as GenerateInput['tone'])}
-            >
-              <option value="soft">やさしめ</option>
-              <option value="normal">標準</option>
-              <option value="strong">強め</option>
-            </select>
-          </div>
-
-          <div>
-            <label style={labelStyle}>目的</label>
-            <select
-              style={inputStyle}
-              value={value.goal}
-              onChange={(e) => setField('goal', e.target.value as GenerateInput['goal'])}
-            >
-              <option value="engagement">反応を取る</option>
-              <option value="sales">販売導線</option>
-              <option value="followers">フォロワー増加</option>
-              <option value="lead">保存・見込み客獲得</option>
-            </select>
           </div>
         </div>
 
@@ -226,6 +360,46 @@ export default function InputForm({
                 <option value="yes">あり</option>
                 <option value="no">なし</option>
               </select>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ ...cardStyle, padding: 16 }}>
+          <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>提案</div>
+
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, marginBottom: 8 }}>
+              テーマ提案
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {THEME_PRESETS.map((theme) => (
+                <button
+                  key={theme}
+                  type="button"
+                  style={chipStyle}
+                  onClick={() => onApplyThemeSuggestion(theme)}
+                >
+                  {theme}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, marginBottom: 8 }}>
+              ターゲット提案
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {TARGET_PRESETS.map((target) => (
+                <button
+                  key={target}
+                  type="button"
+                  style={chipStyle}
+                  onClick={() => onApplyTargetSuggestion(target)}
+                >
+                  {target}
+                </button>
+              ))}
             </div>
           </div>
         </div>
