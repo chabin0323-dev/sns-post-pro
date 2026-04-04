@@ -1,362 +1,369 @@
-const getProfileLabel = (gender: string, age: string) => {
-  const safeGender = gender === '指定なし' ? '' : gender;
-  const safeAge = age === '指定なし' ? '' : age;
-  return `${safeAge}${safeGender}`.trim() || '幅広い層';
+import type {
+  BuzzAnalysis,
+  GenerateInput,
+  GeneratedPost,
+  Platform,
+  TrendIdea
+} from '../types';
+import { buildVideoMeta, buildVideoScenes } from './localVideoBuilder';
+
+const FIXED_HASHTAGS: Record<Platform, string[]> = {
+  TikTok: ['#TikTok', '#おすすめ', '#おすすめにのりたい', '#バズりたい'],
+  X: ['#拡散希望', '#話題', '#注目'],
+  note: ['#note', '#発信', '#コンテンツ販売'],
+  Instagram: ['#Instagram', '#インスタ運用', '#投稿作成'],
+  YouTube: ['#YouTube', '#動画投稿', '#ショート動画']
 };
 
-const cleanTagText = (text: string) =>
-  text.replace(/\s+/g, '').replace(/[^\p{L}\p{N}]/gu, '');
-
-const uniqueTags = (tags: string[], count: number) =>
-  Array.from(new Set(tags.filter(Boolean))).slice(0, count);
-
-const TAG_DB: Record<string, string[]> = {
-  復縁: ['#復縁', '#復縁したい', '#元彼', '#元カレ', '#元サヤ', '#復縁占い', '#復縁方法'],
-  不倫: ['#不倫', '#秘密の恋', '#大人の恋愛', '#許されない恋', '#複雑愛', '#不倫の悩み', '#不倫占い'],
-  片思い: ['#片思い', '#好きな人', '#恋愛成就', '#脈あり', '#告白', '#片思い占い', '#恋の悩み'],
-  告白: ['#告白', '#告白成功', '#告白コツ', '#恋愛成就', '#好きな人', '#告白タイミング', '#恋愛心理'],
-  本音: ['#本音', '#彼の本音', '#相手の気持ち', '#恋愛心理', '#本心', '#気持ちが知りたい', '#恋愛占い'],
-  既読無視: ['#既読無視', '#連絡こない', '#恋愛の悩み', '#脈なし', '#恋愛心理', '#好きな人', '#既読スルー'],
-  遠距離: ['#遠距離恋愛', '#会えない恋', '#恋愛の悩み', '#遠距離カップル', '#連絡頻度', '#恋愛成就'],
-  相性: ['#相性', '#相性占い', '#運命の人', '#恋愛占い', '#恋愛運', '#カップル相性', '#相性診断'],
-  ツインレイ: ['#ツインレイ', '#魂の片割れ', '#運命の人', '#スピリチュアル', '#恋愛占い', '#引き寄せ'],
-  恋愛: ['#恋愛', '#恋愛占い', '#恋愛心理', '#恋愛成就', '#好きな人', '#本音', '#相性'],
+const TIKTOK_THEME_TAGS: Record<string, string[]> = {
+  恋愛: ['#恋愛', '#恋愛心理', '#告白'],
+  美容: ['#美容', '#垢抜け', '#スキンケア'],
+  副業: ['#副業', '#在宅ワーク', '#お金'],
+  集客: ['#集客', '#マーケティング', '#売れる導線'],
+  ダイエット: ['#ダイエット', '#痩せる習慣', '#食事改善'],
+  SNS: ['#SNS運用', '#投稿ネタ', '#バズ投稿']
 };
 
-const DEFAULT_THEME_TAGS = ['#恋愛', '#恋愛占い', '#恋愛心理', '#本音', '#相性', '#運命の人'];
+const PLATFORM_LABEL: Record<Platform, string> = {
+  TikTok: 'TikTok',
+  X: 'X',
+  note: 'note',
+  Instagram: 'Instagram',
+  YouTube: 'YouTube'
+};
 
-const getThemeTags = (theme: string) => {
-  const matched = Object.entries(TAG_DB).find(([key]) => theme.includes(key));
-  const cleaned = cleanTagText(theme);
+const SALES_CTA = {
+  soft: '気になる方はプロフィールからチェックしてください。',
+  normal: '続きが気になる方はプロフィールのリンクから確認してください。',
+  strong: '今すぐプロフィールのリンクから確認してください。迷っている時間がもったいないです。'
+};
 
-  if (matched) {
-    return uniqueTags([`#${cleaned}`, ...matched[1]], 6);
+const FOLLOW_CTA = {
+  soft: 'こういう内容をもっと見たい方はフォローしてください。',
+  normal: '次も見逃したくない方は今のうちにフォローしてください。',
+  strong: 'バズる型を逃したくない方は今すぐフォローしてください。'
+};
+
+const LEAD_CTA = {
+  soft: '必要な方は保存して後で見返してください。',
+  normal: '使う予定がある方は保存してすぐ使えるようにしておいてください。',
+  strong: 'あとで探すと遅いので、今すぐ保存してください。'
+};
+
+function generateId() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function findThemeTags(theme: string): string[] {
+  const hit = Object.entries(TIKTOK_THEME_TAGS).find(([key]) =>
+    theme.includes(key)
+  );
+  if (hit) return hit[1];
+  return ['#発信', '#投稿アイデア', '#伸びる投稿'];
+}
+
+function normalizeTheme(theme: string) {
+  return theme.trim() || '投稿テーマ';
+}
+
+function normalizeTarget(target: string) {
+  return target.trim() || '初心者';
+}
+
+function buildCTA(
+  goal: GenerateInput['goal'],
+  ctaMode: GenerateInput['ctaMode'],
+  includeUrgency: boolean,
+  includeOffer: boolean
+): string {
+  let base = '';
+
+  if (goal === 'sales') base = SALES_CTA[ctaMode];
+  if (goal === 'followers') base = FOLLOW_CTA[ctaMode];
+  if (goal === 'lead') base = LEAD_CTA[ctaMode];
+  if (goal === 'engagement') {
+    base =
+      ctaMode === 'soft'
+        ? 'あなたならどう思うか、コメントで教えてください。'
+        : ctaMode === 'normal'
+        ? 'あなたの意見をコメントで教えてください。'
+        : '今すぐコメントで意見を書いてください。';
   }
 
-  return uniqueTags([`#${cleaned}`, ...DEFAULT_THEME_TAGS], 6);
-};
-
-const getTikTokHashtags = (theme: string) => {
-  const fixed = ['#おすすめ', '#fyp'];
-  const variable = getThemeTags(theme);
-  return uniqueTags([...variable, ...fixed], 5);
-};
-
-const getXHashtags = (theme: string) => {
-  const variable = getThemeTags(theme);
-  return uniqueTags(variable, 3);
-};
-
-const getInstagramHashtags = (theme: string) => {
-  const variable = getThemeTags(theme);
-  const support = ['#恋愛', '#恋愛占い', '#恋愛心理', '#恋愛成就', '#好きな人', '#本音', '#相性', '#運命の人'];
-  return uniqueTags([...variable, ...support], 10);
-};
-
-const getYouTubeHashtags = (theme: string) => {
-  const variable = getThemeTags(theme);
-  const support = ['#恋愛', '#占い', '#恋愛占い', '#相性', '#本音'];
-  return uniqueTags([...variable, ...support], 5);
-};
-
-const getNoteHashtags = (theme: string) => {
-  const variable = getThemeTags(theme);
-  const support = ['#恋愛', '#占い', '#恋愛占い', '#恋愛心理', '#本音'];
-  return uniqueTags([...variable, ...support], 5);
-};
-
-const buildTemplateBlock = (templateText: string, templateUrl: string) => {
-  const text = templateText.trim();
-  const url = templateUrl.trim();
-
-  if (!text && !url) return '';
-  if (text && url) return `${text}\n${url}`;
-  return text || url;
-};
-
-const buildTextOnlyTemplateBlock = (templateText: string) => {
-  return templateText.trim();
-};
-
-const insertBlock = (
-  baseText: string,
-  block: string,
-  insertPosition: 'start' | 'end'
-) => {
-  if (!block) return baseText;
-
-  return insertPosition === 'start'
-    ? `${block}\n\n${baseText}`
-    : `${baseText}\n\n${block}`;
-};
-
-const insertBlockAdvanced = (
-  baseText: string,
-  block: string,
-  position: 'start' | 'end' | 'both'
-) => {
-  if (!block) return baseText;
-
-  if (position === 'start') {
-    return `${block}\n\n${baseText}`;
+  if (includeOffer) {
+    base += ' 無料で使える型も用意しています。';
   }
 
-  if (position === 'end') {
-    return `${baseText}\n\n${block}`;
+  if (includeUrgency) {
+    base += ' 今動く人ほど伸びやすいです。';
   }
 
-  return `${block}\n\n${baseText}\n\n${block}`;
-};
-
-const trimByLength = (text: string, length: string) => {
-  const max = length === '200文字' ? 220 : length === '500文字' ? 560 : 360;
-  if (text.length <= max) return text;
-  return `${text.slice(0, max)}...`;
-};
-
-const appendHashtags = (text: string, hashtags: string[], hashtagMode: 'あり' | 'なし') => {
-  if (hashtagMode === 'なし') return text;
-  if (!hashtags.length) return text;
-  return `${text}\n\n${hashtags.join(' ')}`;
-};
-
-export const generateSNSPostContent = (
-  theme: string,
-  length: string,
-  gender: string,
-  age: string,
-  templateText: string,
-  templateUrl: string,
-  tiktokTemplateText: string,
-  insertPosition: 'start' | 'end',
-  tiktokInsertPosition: 'start' | 'end' | 'both',
-  hashtagMode: 'あり' | 'なし'
-) => {
-  const profile = getProfileLabel(gender, age);
-
-  const noteHashtags = getNoteHashtags(theme);
-  const tikTokHashtags = getTikTokHashtags(theme);
-  const xHashtags = getXHashtags(theme);
-  const instagramHashtags = getInstagramHashtags(theme);
-  const youtubeHashtags = getYouTubeHashtags(theme);
-
-  const hook = `【${theme}で結果が変わる人の共通点】`;
-
-  const noteBase = trimByLength(`${hook}
-
-「${theme}を頑張っているのに、思うように結果が出ない」
-そんなふうに感じたことはありませんか？
-
-特に${profile}の人ほど、
-真面目に取り組むほど、
-「自分のやり方が合っているのか」が分からなくなりやすいです。
-
-でも、結果が出ない理由は才能不足ではありません。
-
-多くの場合、
-足りないのは“努力”ではなく
-「順番」と「見せ方」です。
-
-たとえば${theme}で変化を出す人は、
-最初から大きく変えようとはしません。
-
-まずは次の3つを整えています。
-
-1. 目的をはっきりさせる
-2. 相手に伝わる形に整える
-3. 続けられるやり方に変える
-
-逆に結果が止まりやすい人は、
-・何となく始める
-・伝えたいことを詰め込みすぎる
-・続けにくい形で頑張る
-
-この流れに入りやすいです。
-
-大切なのは、
-「もっと頑張ること」ではなく
-“伝わる形”に整えることです。
-
-今日から意識したいのはこの1つです。
-
-「この内容は、相手が一瞬で理解できるか？」
-
-ここを整えるだけで、
-${theme}の伝わり方は大きく変わります。
-
-最後にもう一度だけ。
-
-${theme}で結果を変える人は、
-特別な才能がある人ではありません。
-“伝わる順番”を知っている人です。
-
-まずは1回、
-伝え方の順番を整えることから始めてみてください。`, length);
-
-  const tiktokBase = `${hook}
-
-ちょっと待ってください
-
-${theme}を頑張ってるのに
-結果が出ない人
-
-かなり多いです
-
-でも原因は
-能力不足じゃありません
-
-足りないのは
-努力じゃなくて
-
-順番です
-
-結果が出る人は
-最初に3つだけ
-意識しています
-
-1つ目
-目的をはっきりさせる
-
-2つ目
-相手に伝わる形にする
-
-3つ目
-続けられる形に変える
-
-この3つです
-
-逆に止まる人は
-何となく始めて
-
-言いたいことを
-詰め込みすぎて
-
-途中で苦しくなります
-
-だから続かない
-
-でも安心してください
-
-変えるべきなのは
-才能じゃなくて
-
-伝え方です
-
-今日から意識するのは
-たった1つ
-
-一瞬で伝わるか
-
-ここだけです
-
-これを整えるだけで
-${theme}の結果は変わります
-
-本当に大事なのは
-頑張り方より
-伝わる順番です
-
-まず1回
-整えてみてください`;
-
-  const xBase = trimByLength(`${theme}で結果が出ない人ほど、努力不足ではなく「順番」で損しています。
-
-大事なのは
-・目的をはっきりさせる
-・相手に伝わる形にする
-・続けられる形に変える
-
-才能より、まず伝え方。
-ここを整えるだけで反応はかなり変わります。`, length);
-
-  const instagramBase = trimByLength(`${hook}
-
-${theme}で結果を変えたいなら、
-最初に整えるべきなのは「順番」です。
-
-・目的をはっきりさせる
-・相手に伝わる形にする
-・続けられる形に変える
-
-この3つを意識するだけで、
-伝わり方も反応も大きく変わります。
-
-がんばり方を増やすより、
-まずは伝わる形を整えること。`, length);
-
-  const youtubeBase = trimByLength(`${hook}
-
-${theme}で結果が変わる人には共通点があります。
-
-それは、努力量ではなく
-「順番」を整えていることです。
-
-今回のポイントは3つです。
-
-1. 目的をはっきりさせる
-2. 相手に伝わる形にする
-3. 続けられる形に変える
-
-この順番を意識するだけで、
-発信の反応も結果も大きく変わります。
-
-まずは今日、
-1つだけでも見直してみてください。`, length);
-
-  const noteBlock = buildTemplateBlock(templateText, templateUrl);
-  const xBlock = buildTemplateBlock(templateText, templateUrl);
-  const instagramBlock = buildTemplateBlock(templateText, templateUrl);
-  const youtubeBlock = buildTemplateBlock(templateText, templateUrl);
-  const tiktokBlock = buildTextOnlyTemplateBlock(tiktokTemplateText);
-
-  const noteText = appendHashtags(
-    insertBlock(noteBase, noteBlock, insertPosition),
-    noteHashtags,
-    hashtagMode
-  );
-
-  const tiktokText = appendHashtags(
-    insertBlockAdvanced(tiktokBase, tiktokBlock, tiktokInsertPosition),
-    tikTokHashtags,
-    hashtagMode
-  );
-
-  const xText = appendHashtags(
-    insertBlock(xBase, xBlock, insertPosition),
-    xHashtags,
-    hashtagMode
-  );
-
-  const instagramText = appendHashtags(
-    insertBlock(instagramBase, instagramBlock, insertPosition),
-    instagramHashtags,
-    hashtagMode
-  );
-
-  const youtubeText = appendHashtags(
-    insertBlock(youtubeBase, youtubeBlock, insertPosition),
-    youtubeHashtags,
-    hashtagMode
-  );
+  return base;
+}
+
+function buildTitle(platform: Platform, theme: string, target: string) {
+  switch (platform) {
+    case 'TikTok':
+      return `${target}向け｜${theme}で反応が変わる投稿の型`;
+    case 'X':
+      return `${theme}で反応が取れない人へ。改善ポイントを1つだけ言います。`;
+    case 'note':
+      return `${theme}で伸びる発信の作り方｜${target}向け完全ガイド`;
+    case 'Instagram':
+      return `${theme}で見られる投稿に変えるコツ`;
+    case 'YouTube':
+      return `${theme}で再生されやすくなる構成を解説`;
+    default:
+      return `${theme}の投稿案`;
+  }
+}
+
+function buildHook(theme: string, target: string, tone: GenerateInput['tone']) {
+  if (tone === 'soft') {
+    return `${target}の方へ。${theme}で反応が取れないなら、まず最初の一文を変えてみてください。`;
+  }
+  if (tone === 'strong') {
+    return `${theme}で伸びない原因は、内容ではなく“最初の1秒”です。${target}ほどここを外しています。`;
+  }
+  return `${target}が${theme}で結果を出すなら、最初の見せ方を変えるだけで反応はかなり変わります。`;
+}
+
+function buildBody(platform: Platform, input: GenerateInput, cta: string) {
+  const theme = normalizeTheme(input.theme);
+  const target = normalizeTarget(input.target);
+  const hook = buildHook(theme, target, input.tone);
+
+  const commonBlocks = [
+    hook,
+    '',
+    '伸びない投稿には共通点があります。',
+    'それは「言いたいこと」から始めていることです。',
+    '',
+    '見られる投稿は逆です。',
+    '最初に“相手が気になること”を置きます。',
+    '',
+    `例えば${theme}なら、`,
+    '・失敗する人の共通点',
+    '・知らないと損する落とし穴',
+    '・今すぐ変えるべき1点',
+    'このような切り口にすると、最後まで見られやすくなります。',
+    '',
+    `${target}向けに言うなら、`,
+    '難しいことを言うより、',
+    '「これなら自分にもできそう」と思わせる設計が重要です。',
+    '',
+    cta
+  ];
+
+  if (platform === 'X') {
+    return [
+      `${hook}`,
+      `伸びない投稿の多くは「伝えたいこと」から始まります。`,
+      `でも見られる投稿は「相手が気になること」から始まります。`,
+      `例えば${theme}なら「失敗する人の共通点」「知らないと損する1点」から入るだけで反応は変わります。`,
+      cta
+    ].join('\n');
+  }
+
+  if (platform === 'TikTok') {
+    return [
+      `${hook}`,
+      '',
+      `【伸びない理由】`,
+      `伝えたいことを先に言っている`,
+      '',
+      `【伸びる型】`,
+      `1. 痛みを先に出す`,
+      `2. 失敗例を見せる`,
+      `3. すぐ使える改善例を1つ出す`,
+      `4. 保存 or プロフ誘導で締める`,
+      '',
+      `【例】`,
+      `「${theme}で失敗する人、最初にここを間違えています」`,
+      '',
+      cta
+    ].join('\n');
+  }
+
+  if (platform === 'note') {
+    return [
+      `${hook}`,
+      '',
+      `この記事では、${target}が${theme}で反応を取るための考え方を整理します。`,
+      '',
+      '結論から言うと、重要なのは内容量ではありません。',
+      '最初のつかみ、途中の離脱防止、最後の行動導線です。',
+      '',
+      '特に最初の一文で「自分に関係ある」と思わせることができるかどうかで、読了率もCVも変わります。',
+      '',
+      'この型を使うだけで、投稿の見られ方はかなり変わります。',
+      '',
+      cta
+    ].join('\n');
+  }
+
+  return commonBlocks.join('\n');
+}
+
+function buildHashtags(platform: Platform, input: GenerateInput): string[] {
+  if (!input.includeHashtags || input.hashtagMode === 'none') return [];
+
+  const themeTags = findThemeTags(input.theme);
+  const fixed = input.includeFixedHashtags ? FIXED_HASHTAGS[platform] : [];
+  const raw = [...themeTags, ...fixed];
+
+  return Array.from(new Set(raw)).slice(0, platform === 'TikTok' ? 6 : 5);
+}
+
+function scoreBuzz(platform: Platform, content: string, hashtags: string[], input: GenerateInput): BuzzAnalysis {
+  let hookPower = 72;
+  let readability = 74;
+  let curiosity = 73;
+  let conversion = 70;
+
+  if (platform === 'TikTok') {
+    hookPower += 10;
+    curiosity += 9;
+  }
+
+  if (input.goal === 'sales') conversion += 12;
+  if (input.goal === 'followers') curiosity += 4;
+  if (input.ctaMode === 'strong') conversion += 8;
+  if (input.includeUrgency) conversion += 5;
+  if (hashtags.length >= 4) readability += 3;
+  if (content.includes('失敗')) curiosity += 4;
+  if (content.includes('今すぐ')) conversion += 3;
+
+  hookPower = Math.min(99, hookPower);
+  readability = Math.min(99, readability);
+  curiosity = Math.min(99, curiosity);
+  conversion = Math.min(99, conversion);
+
+  const score = Math.round((hookPower + readability + curiosity + conversion) / 4);
+
+  const reason: string[] = [];
+
+  if (platform === 'TikTok') reason.push('TikTok向けに冒頭3秒の引きを強めています');
+  if (input.includeUrgency) reason.push('緊急性を入れて行動率を上げています');
+  if (input.goal === 'sales') reason.push('販売導線を意識したCTA構成です');
+  if (hashtags.length > 0) reason.push('テーマ連動ハッシュタグで発見率を補強しています');
+  if (input.tone === 'strong') reason.push('スクロール停止を狙う強い言い回しを使用しています');
 
   return {
-    title: hook,
-    content: noteText,
-    capcutScript: tiktokText,
-    xPost: xText,
-    instagramPost: instagramText,
-    youtubePost: youtubeText,
-    hashtags:
-      hashtagMode === 'あり'
-        ? Array.from(
-            new Set([
-              ...noteHashtags,
-              ...tikTokHashtags,
-              ...xHashtags,
-              ...instagramHashtags,
-              ...youtubeHashtags,
-            ])
-          )
-        : [],
+    score,
+    hookPower,
+    readability,
+    curiosity,
+    conversion,
+    reason
   };
-};
+}
+
+function buildCapcutScript(
+  platform: Platform,
+  theme: string,
+  target: string,
+  cta: string
+) {
+  return [
+    `【${PLATFORM_LABEL[platform]}用ショート動画構成】`,
+    `1. 冒頭3秒`,
+    `${target}向け。${theme}で伸びない原因は内容ではなく入り方です。`,
+    ``,
+    `2. 問題提起`,
+    `言いたいことから話すと飛ばされます。`,
+    ``,
+    `3. 改善ポイント`,
+    `先に痛み、次に失敗例、最後に改善例を出します。`,
+    ``,
+    `4. CTA`,
+    `${cta}`
+  ].join('\n');
+}
+
+function buildSinglePost(platform: Platform, input: GenerateInput): GeneratedPost {
+  const theme = normalizeTheme(input.theme);
+  const target = normalizeTarget(input.target);
+  const cta = buildCTA(
+    input.goal,
+    input.ctaMode,
+    input.includeUrgency,
+    input.includeOffer
+  );
+
+  const title = buildTitle(platform, theme, target);
+  const hashtags = buildHashtags(platform, input);
+  const content = buildBody(platform, input, cta);
+  const buzzAnalysis = scoreBuzz(platform, content, hashtags, input);
+  const capcutScript = buildCapcutScript(platform, theme, target, cta);
+  const videoScenes = buildVideoScenes(input, platform);
+  const videoMeta = buildVideoMeta(input, platform);
+  const now = new Date().toISOString();
+
+  return {
+    id: generateId(),
+    platform,
+    title,
+    content,
+    hashtags,
+    capcutScript,
+    theme,
+    target,
+    cta,
+    buzzScore: buzzAnalysis.score,
+    buzzAnalysis,
+    createdAt: now,
+    updatedAt: now,
+    status: 'ready',
+    videoTitle: videoMeta.videoTitle,
+    videoScenes,
+    videoDescription: videoMeta.videoDescription,
+    thumbnailText: videoMeta.thumbnailText
+  };
+}
+
+export function generatePosts(input: GenerateInput): GeneratedPost[] {
+  return input.platforms.map((platform) => buildSinglePost(platform, input));
+}
+
+export function generateTrendIdeas(theme: string, target: string): TrendIdea[] {
+  const t = normalizeTheme(theme);
+  const g = normalizeTarget(target);
+
+  return [
+    {
+      id: generateId(),
+      angle: '失敗回避',
+      title: `${g}が${t}でやりがちな失敗3選`,
+      hook: `${t}で反応が出ない人、最初にここを間違えています。`,
+      reason: '痛みベースでスクロール停止を狙いやすい型'
+    },
+    {
+      id: generateId(),
+      angle: '比較',
+      title: `伸びない投稿と伸びる投稿の違い`,
+      hook: `同じ${t}でも、伸びる人と伸びない人の差はここです。`,
+      reason: '比較は最後まで見られやすく理解されやすい'
+    },
+    {
+      id: generateId(),
+      angle: '即効性',
+      title: `${t}で今すぐ変えるべき1つ`,
+      hook: `${t}で結果を変えたいなら、最初に直すのはここです。`,
+      reason: '1点集中は保存率と実行率が高い'
+    }
+  ];
+}
+
+export function generateIdeaPosts(theme: string, target: string): string[] {
+  const t = normalizeTheme(theme);
+  const g = normalizeTarget(target);
+
+  return [
+    `${g}向け｜${t}で反応が変わる冒頭テンプレ3選`,
+    `${t}で伸びない人の共通点`,
+    `${t}で“保存される投稿”の作り方`,
+    `${t}で売れる人が先にやっていること`,
+    `${t}で最後まで見られる流れ`
+  ];
+}
