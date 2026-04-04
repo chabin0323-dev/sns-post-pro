@@ -4,9 +4,9 @@ import ResultCard from './components/ResultCard';
 import { generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_final_v2';
-const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_final_v2';
-const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_final_v2';
+const STORAGE_KEY = 'sns_post_generator_final_v3';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_final_v3';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_final_v3';
 
 const defaultInput: GenerateInput = {
   theme: '',
@@ -21,7 +21,7 @@ const defaultInput: GenerateInput = {
   ctaMode: 'strong',
   includeUrgency: true,
   includeOffer: true,
-  lengthMode: '標準',
+  lengthMode: 300,
   noteXPhrase: '詳しくはこちら👇',
   noteXUrl: '',
   noteXInsertPosition: 'end',
@@ -31,14 +31,28 @@ const defaultInput: GenerateInput = {
 
 const pageStyle: React.CSSProperties = {
   minHeight: '100vh',
-  background: 'linear-gradient(180deg, #f7f7fb 0%, #eef4fb 100%)',
+  background: `
+    radial-gradient(circle at 0% 0%, rgba(99,102,241,0.18), transparent 30%),
+    radial-gradient(circle at 100% 20%, rgba(236,72,153,0.16), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(56,189,248,0.14), transparent 24%),
+    linear-gradient(180deg, #f7f7fb 0%, #eef4fb 100%)
+  `,
   padding: '24px 16px 60px'
 };
 
 const containerStyle: React.CSSProperties = {
   width: '100%',
-  maxWidth: 1180,
+  maxWidth: 1240,
   margin: '0 auto'
+};
+
+const heroStyle: React.CSSProperties = {
+  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 50%, #06b6d4 100%)',
+  borderRadius: 28,
+  padding: 28,
+  color: '#fff',
+  boxShadow: '0 20px 40px rgba(79, 70, 229, 0.22)',
+  marginBottom: 18
 };
 
 const darkPanel: React.CSSProperties = {
@@ -142,19 +156,26 @@ export default function App() {
   return (
     <div style={pageStyle}>
       <div style={containerStyle}>
-        <div style={{ marginBottom: 18 }}>
-          <div style={{ fontSize: 34, fontWeight: 900, color: '#15233d', marginBottom: 10 }}>
+        <div style={heroStyle}>
+          <div style={{ fontSize: 36, fontWeight: 900, marginBottom: 10 }}>
             SNS投稿生成アプリ
           </div>
-          <div style={{ color: '#58708f', fontSize: 15, lineHeight: 1.7 }}>
-            文字数選択と各SNSの決まり文挿入機能を復活し、生成時に自動反映する版です。
+          <div style={{ fontSize: 15, lineHeight: 1.8, opacity: 0.96, maxWidth: 780 }}>
+            100〜500文字を選んで、TikTok・X・note・Instagram・YouTube向けの投稿を生成。
+            noteは長文対応、各SNSの決まり文とURLも自動で反映します。
+          </div>
+
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 18 }}>
+            <HeroStat label="累計生成" value={`${summary.total}`} />
+            <HeroStat label="TikTok生成数" value={`${summary.tiktokCount}`} />
+            <HeroStat label="平均バズ度" value={`${summary.avgBuzz}`} />
           </div>
         </div>
 
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: '1.1fr 0.9fr',
+            gridTemplateColumns: '1.08fr 0.92fr',
             gap: 18,
             alignItems: 'start'
           }}
@@ -267,6 +288,23 @@ function MetricCard({ label, value }: { label: string; value: string }) {
     >
       <div style={{ color: 'rgba(255,255,255,0.68)', fontSize: 13, marginBottom: 6 }}>{label}</div>
       <div style={{ color: '#fff', fontWeight: 900, fontSize: 24 }}>{value}</div>
+    </div>
+  );
+}
+
+function HeroStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div
+      style={{
+        background: 'rgba(255,255,255,0.14)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        borderRadius: 16,
+        padding: '12px 16px',
+        minWidth: 140
+      }}
+    >
+      <div style={{ fontSize: 12, opacity: 0.86 }}>{label}</div>
+      <div style={{ fontSize: 24, fontWeight: 900, marginTop: 4 }}>{value}</div>
     </div>
   );
 }
