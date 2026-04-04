@@ -1,508 +1,110 @@
-import type {
-  BuzzAnalysis,
-  GenerateInput,
-  GeneratedPost,
-  Platform,
-  TrendIdea
-} from '../types';
+import type { GenerateInput, GeneratedPost } from '../types';
 
-const FIXED_HASHTAGS: Record<Platform, string[]> = {
-  TikTok: ['#TikTok', '#おすすめ', '#おすすめにのりたい', '#バズりたい'],
-  X: ['#拡散希望', '#話題', '#注目'],
-  note: ['#note', '#発信', '#コンテンツ販売'],
-  Instagram: ['#Instagram', '#インスタ運用', '#投稿作成'],
-  YouTube: ['#YouTube', '#動画投稿', '#ショート動画']
-};
-
-const THEME_TAGS: Record<string, string[]> = {
-  恋愛: ['#恋愛', '#恋愛心理', '#好きな人'],
-  告白: ['#告白', '#告白成功', '#告白初心者'],
-  復縁: ['#復縁', '#復縁したい', '#復縁コツ'],
-  片想い: ['#片想い', '#恋愛', '#好きな人'],
-  脈あり: ['#脈あり', '#恋愛心理', '#好意'],
-  脈なし: ['#脈なし', '#恋愛相談', '#逆転'],
-  恋愛心理: ['#恋愛心理', '#恋愛', '#好きな人'],
-  浮気: ['#浮気', '#恋愛', '#恋愛相談'],
-  美容: ['#美容', '#垢抜け', '#自分磨き'],
-  副業: ['#副業', '#在宅ワーク', '#お金'],
-  集客: ['#集客', '#マーケティング', '#売れる導線'],
-  ダイエット: ['#ダイエット', '#痩せる習慣', '#食事改善'],
-  SNS運用: ['#SNS運用', '#投稿ネタ', '#バズ投稿'],
-  占い: ['#占い', '#運勢', '#恋愛占い']
-};
-
-function generateId() {
-  return `${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+function rand<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
-function normalizeTheme(theme: string) {
-  return theme.trim() || '投稿テーマ';
+function hooks(theme: string) {
+  return [
+    `実はこれ、${theme}のサインです`,
+    `${theme}で9割が間違えてます`,
+    `${theme}で損してる人の特徴`,
+    `${theme}で一気に変わる方法`,
+    `${theme}でやってはいけない行動`
+  ];
 }
 
-function normalizeTarget(target: string) {
-  return target.trim() || '初心者';
-}
+function buildContent(input: GenerateInput) {
+  const h = rand(hooks(input.theme));
 
-function detectThemeKey(theme: string): string {
-  const normalized = normalizeTheme(theme);
+  const patterns = [
 
-  const keys = [
-    '恋愛心理',
-    '脈あり',
-    '脈なし',
-    '片想い',
-    '告白',
-    '復縁',
-    '浮気',
-    '恋愛',
-    '美容',
-    '副業',
-    '集客',
-    'ダイエット',
-    'SNS運用',
-    '占い'
+    [
+      h,
+      '',
+      'これ知らないと',
+      '普通に損します',
+      '',
+      'ほとんどの人は',
+      'ここを間違えています',
+      '',
+      'だから結果が出ません',
+      '',
+      'でも逆に',
+      '',
+      'ここを変えるだけで',
+      '一気に変わります',
+      '',
+      '続きはプロフィールから👇'
+    ],
+
+    [
+      h,
+      '',
+      'これ気づいてますか？',
+      '',
+      'うまくいかない人は',
+      '同じパターンです',
+      '',
+      '原因は能力じゃありません',
+      '',
+      'やり方です',
+      '',
+      '順番を変えるだけで',
+      '全部変わります',
+      '',
+      '続きはプロフィールから👇'
+    ],
+
+    [
+      h,
+      '',
+      '実は逆です',
+      '',
+      '多くの人が',
+      '勘違いしています',
+      '',
+      'だから失敗します',
+      '',
+      '正しくは',
+      '',
+      'これを先にやること',
+      '',
+      '続きはプロフィールから👇'
+    ]
+
   ];
 
-  for (const key of keys) {
-    if (normalized.includes(key)) return key;
-  }
-
-  return normalized;
-}
-
-function buildHashtags(platform: Platform, input: GenerateInput): string[] {
-  if (!input.includeHashtags || input.hashtagMode === 'none') return [];
-
-  const themeKey = detectThemeKey(input.theme);
-  const themeTags = THEME_TAGS[themeKey] ?? ['#投稿', '#発信', '#伸びる投稿'];
-  const fixed = input.includeFixedHashtags ? FIXED_HASHTAGS[platform] : [];
-
-  return Array.from(new Set([...themeTags, ...fixed])).slice(0, platform === 'TikTok' ? 6 : 5);
-}
-
-function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: string[]): BuzzAnalysis {
-  let hookPower = platform === 'TikTok' ? 90 : 76;
-  let readability = 86;
-  let curiosity = 84;
-  let conversion = input.goal === 'sales' ? 88 : 80;
-
-  if (input.ctaMode === 'strong') conversion += 4;
-  if (input.includeUrgency) conversion += 3;
-  if (hashtags.length >= 4) readability += 2;
-
-  hookPower = Math.min(99, hookPower);
-  readability = Math.min(99, readability);
-  curiosity = Math.min(99, curiosity);
-  conversion = Math.min(99, conversion);
-
-  const score = Math.round((hookPower + readability + curiosity + conversion) / 4);
-
-  return {
-    score,
-    hookPower,
-    readability,
-    curiosity,
-    conversion,
-    reason: [
-      '入力テーマに合わせて記事内容を切り替えています',
-      'TikTok向けの短文改行構成です',
-      '冒頭で興味を引く流れにしています'
-    ]
-  };
-}
-
-function buildTikTokBlocks(themeKey: string, input: GenerateInput): string[] {
-  const target = normalizeTarget(input.target);
-
-  switch (themeKey) {
-    case '浮気':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '実はこれ、',
-        '浮気のサインです。',
-        '',
-        '最近なんとなく',
-        '違和感があるなら',
-        '',
-        '気のせいではないかも',
-        'しれません',
-        '',
-        '浮気をしている人は',
-        '',
-        '急にスマホを隠す',
-        '返信が雑になる',
-        '予定を聞かれるのを嫌がる',
-        '',
-        'この変化が',
-        '出やすいです',
-        '',
-        'でも一番危ないのは',
-        '',
-        '優しさで',
-        'ごまかされること',
-        '',
-        '言葉より',
-        '行動を見てください',
-        '',
-        `${target}の人ほど`,
-        '不安で見ないふりを',
-        'しやすいので',
-        '',
-        '違和感は',
-        'そのままにしないでください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '告白':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '告白で',
-        '失敗する人の共通点',
-        '',
-        '実は',
-        '勇気不足じゃありません',
-        '',
-        '多くの人は',
-        '気持ちを伝える前に',
-        '',
-        '空気作りを',
-        '飛ばしています',
-        '',
-        '急に重く伝えると',
-        '相手は引きやすいです',
-        '',
-        '先に必要なのは',
-        '',
-        '話しやすさ',
-        '安心感',
-        '自然な流れ',
-        '',
-        'この3つです',
-        '',
-        `${target}ほど`,
-        '答えを急ぎやすいので',
-        '',
-        '告白の前に',
-        '関係の温度を',
-        '整えてください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '復縁':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '復縁で',
-        '止まる人の共通点',
-        '',
-        '戻りたい人ほど',
-        'すぐ連絡したくなります',
-        '',
-        'でもその焦りが',
-        '逆効果です',
-        '',
-        '別れた直後に必要なのは',
-        '',
-        '説得ではなく',
-        '距離の整え直し',
-        '',
-        '落ち着く',
-        '変わる',
-        '自然に見せる',
-        '',
-        'この順番で',
-        '見せることが大事です',
-        '',
-        `${target}の人は`,
-        '気持ちで押しやすいので',
-        '',
-        'まずは追わない形を',
-        '覚えてください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '片想い':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '片想いで',
-        '苦しくなる人の共通点',
-        '',
-        '相手の気持ちより',
-        '不安を見ています',
-        '',
-        '返信が少し遅いだけで',
-        '脈なしだと思う',
-        '',
-        'これを続けると',
-        '自分から崩れます',
-        '',
-        '大事なのは',
-        '',
-        '反応の一回より',
-        '関係の積み重ね',
-        '',
-        `${target}の人ほど`,
-        '答えを急ぎやすいので',
-        '',
-        'まずは',
-        '会いやすい流れを',
-        '作ってください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '脈あり':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '好きな人が出している',
-        '脈ありサイン',
-        '',
-        '言葉より先に',
-        '行動を見てください',
-        '',
-        '返信が続く',
-        '質問が返ってくる',
-        '会話を終わらせない',
-        '',
-        'これは好意の可能性が',
-        '高いです',
-        '',
-        '逆に',
-        '',
-        '必要な返事だけ',
-        '話を広げない',
-        '自分から来ない',
-        '',
-        'この形は',
-        '温度が低めです',
-        '',
-        `${target}の人ほど`,
-        '言葉だけで判断するので',
-        '',
-        '行動の量を',
-        '見てください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '脈なし':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        'この行動、',
-        '脈なしの可能性です',
-        '',
-        '返事は来るのに',
-        '会話が続かない',
-        '',
-        'これは',
-        'かなり多いパターンです',
-        '',
-        '脈なしっぽい時に',
-        '一番ダメなのは',
-        '',
-        '追いすぎること',
-        '',
-        '相手が引いている時に',
-        '押すほど',
-        '距離は広がります',
-        '',
-        `${target}の人は`,
-        '不安で動きすぎるので',
-        '',
-        'まずは',
-        '追わない強さを',
-        '持ってください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '恋愛心理':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '恋愛心理で',
-        '差がつくポイント',
-        '',
-        '恋愛は',
-        '気持ちだけでは動きません',
-        '',
-        '人は',
-        '安心する人',
-        '気になる人',
-        '失いたくない人',
-        '',
-        'この順で',
-        '惹かれやすいです',
-        '',
-        `${target}の人ほど`,
-        '気持ちを見せるのが早いので',
-        '',
-        'まずは',
-        '安心感を作ってください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    case '恋愛':
-      return [
-        '続きはプロフィールから👇',
-        '',
-        '恋愛で',
-        '結果が変わる人の共通点',
-        '',
-        '恋愛が進む人は',
-        '',
-        '気持ちの強さより',
-        '順番を大事にしています',
-        '',
-        'いきなり答えを求めず',
-        '',
-        '話しやすさ',
-        '安心感',
-        'また会いたさ',
-        '',
-        'この流れを作っています',
-        '',
-        `${target}ほど`,
-        '結果を急ぎやすいので',
-        '',
-        'まずは',
-        '心地よさを作ってください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-
-    default:
-      return [
-        '続きはプロフィールから👇',
-        '',
-        `実はこれ、`,
-        `${normalizeTheme(input.theme)}で`,
-        '見落としがちな事実です',
-        '',
-        '結果が出る人は',
-        '',
-        '内容より先に',
-        '伝わり方を整えています',
-        '',
-        '見られる投稿は',
-        '',
-        '最初に気になる言葉',
-        '次に失敗例',
-        '最後に改善例',
-        '',
-        'この順番です',
-        '',
-        `${target}の人ほど`,
-        '詰め込みやすいので',
-        '',
-        'まずは一文目だけ',
-        '変えてください',
-        '',
-        '続きはプロフィールから👇'
-      ];
-  }
-}
-
-function buildBody(platform: Platform, input: GenerateInput): string {
-  const themeKey = detectThemeKey(input.theme);
-  const theme = normalizeTheme(input.theme);
-  const target = normalizeTarget(input.target);
-
-  if (platform === 'TikTok') {
-    return buildTikTokBlocks(themeKey, input).join('\n');
-  }
-
-  if (platform === 'X') {
-    return [
-      `${theme}で結果が変わる人は、内容ではなく順番を整えています。`,
-      `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`
-    ].join('\n');
-  }
-
-  if (platform === 'note') {
-    return [
-      `${theme}で反応を変えたいなら、まず最初の一文を見直してください。`,
-      `${target}に届く発信は、説明より先に「自分ごと」と思わせる流れがあります。`
-    ].join('\n\n');
-  }
-
-  return [
-    `${theme}に関連した投稿案です。`,
-    `${target}に伝わりやすい流れで作っています。`
-  ].join('\n');
-}
-
-function buildTitle(platform: Platform, input: GenerateInput): string {
-  const theme = normalizeTheme(input.theme);
-  const target = normalizeTarget(input.target);
-
-  if (platform === 'TikTok') {
-    return `${target}向け｜${theme}で反応が変わる投稿`;
-  }
-
-  return `${theme}投稿案`;
-}
-
-function buildSinglePost(platform: Platform, input: GenerateInput): GeneratedPost {
-  const now = new Date().toISOString();
-  const hashtags = buildHashtags(platform, input);
-  const buzzAnalysis = buildBuzzAnalysis(platform, input, hashtags);
-
-  return {
-    id: generateId(),
-    platform,
-    title: buildTitle(platform, input),
-    content: buildBody(platform, input),
-    hashtags,
-    theme: normalizeTheme(input.theme),
-    target: normalizeTarget(input.target),
-    gender: input.gender,
-    buzzScore: buzzAnalysis.score,
-    buzzAnalysis,
-    createdAt: now,
-    updatedAt: now,
-    status: 'ready'
-  };
+  return rand(patterns).join('\n');
 }
 
 export function generatePosts(input: GenerateInput): GeneratedPost[] {
-  return input.platforms.map((platform) => buildSinglePost(platform, input));
-}
 
-export function generateTrendIdeas(theme: string, target: string): TrendIdea[] {
-  const t = normalizeTheme(theme);
-  const g = normalizeTarget(target);
+  return input.platforms.map((p) => {
 
-  return [
-    {
-      id: generateId(),
-      angle: '共通点',
-      title: `${g}向け｜${t}で結果が変わる人の共通点`,
-      hook: `${t}でうまくいく人は、最初にここを整えています。`,
-      reason: 'テーマ直結で使いやすいタイトル'
-    },
-    {
-      id: generateId(),
-      angle: '失敗回避',
-      title: `${t}で失敗しやすい人の特徴`,
-      hook: `${t}で止まる人は、同じミスをしています。`,
-      reason: '痛み訴求で反応を取りやすい'
-    },
-    {
-      id: generateId(),
-      angle: '改善',
-      title: `${t}で今すぐ変えるべき1つ`,
-      hook: `${t}で結果を変えたいなら、最初に直すのはここです。`,
-      reason: '短く強いタイトルで使いやすい'
-    }
-  ];
+    return {
+      id: Date.now().toString(),
+      platform: p,
+      title: input.theme,
+      content: buildContent(input),
+      hashtags: ['#おすすめ', '#バズりたい'],
+      theme: input.theme,
+      target: input.target,
+      gender: input.gender,
+      buzzScore: 90,
+      buzzAnalysis: {
+        score: 90,
+        hookPower: 90,
+        readability: 85,
+        curiosity: 88,
+        conversion: 87,
+        reason: ['バズ構造']
+      },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      status: 'ready'
+    };
+
+  });
+
 }
