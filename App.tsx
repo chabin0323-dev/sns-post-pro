@@ -4,9 +4,9 @@ import ResultCard from './components/ResultCard';
 import { generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_history_v4';
-const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v4';
-const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v4';
+const STORAGE_KEY = 'sns_post_generator_history_v5';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v5';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v5';
 
 const defaultInput: GenerateInput = {
   theme: '',
