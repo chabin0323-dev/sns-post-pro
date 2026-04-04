@@ -189,175 +189,63 @@ function buildThemeBlocks(themeKey: string, target: string): string[][] {
   ];
 
   const map: Record<string, string[][]> = {
-    恋愛: [
-      [
-        hook,
-        '',
-        '恋愛が進む人は',
-        '',
-        '気持ちの強さより',
-        '順番を大事にしています',
-        '',
-        'いきなり答えを求めず',
-        '',
-        '話しやすさ',
-        '安心感',
-        'また会いたさ',
-        '',
-        'この流れを作っています',
-        '',
-        `${target}ほど`,
-        '結果を急ぎやすいので',
-        '',
-        'まずは心地よさを',
-        '作ってください'
-      ]
-    ],
-    告白: [
-      [
-        hook,
-        '',
-        '告白で失敗する人は',
-        '勇気が足りないのではなく',
-        '',
-        '空気作りを',
-        '飛ばしています',
-        '',
-        '先に必要なのは',
-        '安心感です',
-        '',
-        '話しやすい',
-        '会いやすい',
-        '返しやすい',
-        '',
-        'この流れができると',
-        '結果は変わります'
-      ]
-    ],
-    復縁: [
-      [
-        hook,
-        '',
-        '復縁したい人ほど',
-        'すぐ連絡したくなります',
-        '',
-        'でも焦るほど',
-        '戻りにくくなります',
-        '',
-        '必要なのは',
-        '説得ではなく',
-        '距離の整え直しです',
-        '',
-        '落ち着く',
-        '変わる',
-        '自然に見せる',
-        '',
-        'この順番が大事です'
-      ]
-    ],
-    片想い: [
-      [
-        hook,
-        '',
-        '片想いで苦しくなる人は',
-        '相手の気持ちより',
-        '不安を見ています',
-        '',
-        '返信が少し遅いだけで',
-        '脈なしと思いやすいです',
-        '',
-        'でも本当に大事なのは',
-        '積み重ねです',
-        '',
-        '会いやすい',
-        '話しやすい',
-        'また会いたい',
-        '',
-        'この流れを作ってください'
-      ]
-    ],
-    脈あり: [
-      [
-        hook,
-        '',
-        '脈ありは',
-        '言葉より行動に出ます',
-        '',
-        '返信が続く',
-        '質問が返ってくる',
-        '会話を終わらせない',
-        '',
-        'これは好意の可能性が',
-        '高いです',
-        '',
-        '逆に',
-        '必要な返事だけなら',
-        '温度は低めです'
-      ]
-    ],
-    脈なし: [
-      [
-        hook,
-        '',
-        '脈なしっぽい時に',
-        '一番やってはいけないのは',
-        '追いすぎることです',
-        '',
-        '相手が引いている時に',
-        '押すほど',
-        '距離は広がります',
-        '',
-        '逆転したいなら',
-        '一度引くこと',
-        '',
-        'これが大事です'
-      ]
-    ],
-    浮気: [
-      [
-        hook,
-        '',
-        '違和感があるなら',
-        '気のせいではないかも',
-        'しれません',
-        '',
-        '浮気をしている人は',
-        '',
-        'スマホを隠す',
-        '返信が雑になる',
-        '予定を聞かれるのを嫌がる',
-        '',
-        'この変化が',
-        '出やすいです',
-        '',
-        '言葉より行動を',
-        '見てください'
-      ]
-    ]
+    恋愛: [[
+      hook, '', '恋愛が進む人は', '', '気持ちの強さより', '順番を大事にしています', '',
+      'いきなり答えを求めず', '', '話しやすさ', '安心感', 'また会いたさ', '',
+      'この流れを作っています', '', `${target}ほど`, '結果を急ぎやすいので', '',
+      'まずは心地よさを', '作ってください'
+    ]],
+    告白: [[
+      hook, '', '告白で失敗する人は', '勇気が足りないのではなく', '', '空気作りを', '飛ばしています', '',
+      '先に必要なのは', '安心感です', '', '話しやすい', '会いやすい', '返しやすい', '',
+      'この流れができると', '結果は変わります'
+    ]],
+    復縁: [[
+      hook, '', '復縁したい人ほど', 'すぐ連絡したくなります', '', 'でも焦るほど', '戻りにくくなります', '',
+      '必要なのは', '説得ではなく', '距離の整え直しです', '', '落ち着く', '変わる', '自然に見せる', '',
+      'この順番が大事です'
+    ]],
+    片想い: [[
+      hook, '', '片想いで苦しくなる人は', '相手の気持ちより', '不安を見ています', '',
+      '返信が少し遅いだけで', '脈なしと思いやすいです', '',
+      'でも本当に大事なのは', '積み重ねです', '', '会いやすい', '話しやすい', 'また会いたい', '',
+      'この流れを作ってください'
+    ]],
+    脈あり: [[
+      hook, '', '脈ありは', '言葉より行動に出ます', '', '返信が続く', '質問が返ってくる', '会話を終わらせない', '',
+      'これは好意の可能性が', '高いです', '', '逆に', '必要な返事だけなら', '温度は低めです'
+    ]],
+    脈なし: [[
+      hook, '', '脈なしっぽい時に', '一番やってはいけないのは', '追いすぎることです', '',
+      '相手が引いている時に', '押すほど', '距離は広がります', '',
+      '逆転したいなら', '一度引くこと', '', 'これが大事です'
+    ]],
+    浮気: [[
+      hook, '', '違和感があるなら', '気のせいではないかも', 'しれません', '', '浮気をしている人は', '',
+      'スマホを隠す', '返信が雑になる', '予定を聞かれるのを嫌がる', '',
+      'この変化が', '出やすいです', '', '言葉より行動を', '見てください'
+    ]]
   };
 
   return [...(map[themeKey] ?? []), ...common];
 }
 
 function applyPhraseToTikTok(blocks: string[], phrase: string, position: TiktokInsertPosition): string[] {
-  if (!phrase.trim()) return blocks;
+  const clean = phrase.trim();
+  if (!clean) return blocks;
 
-  if (position === 'start') {
-    return [phrase, '', ...blocks];
-  }
-
-  if (position === 'end') {
-    return [...blocks, '', phrase];
-  }
-
-  return [phrase, '', ...blocks, '', phrase];
+  if (position === 'start') return [clean, '', ...blocks];
+  if (position === 'end') return [...blocks, '', clean];
+  return [clean, '', ...blocks, '', clean];
 }
 
-function applyPhraseToNoteX(body: string, phrase: string, url: string, position: InsertPosition): string {
-  const cleanPhrase = phrase.trim();
-  const cleanUrl = url.trim();
-  const insertText = [cleanPhrase, cleanUrl].filter(Boolean).join('\n');
+function buildNoteXInsertText(phrase: string, url: string): string {
+  const lines = [phrase.trim(), url.trim()].filter(Boolean);
+  return lines.join('\n');
+}
 
+function applyPhraseToText(body: string, phrase: string, url: string, position: InsertPosition): string {
+  const insertText = buildNoteXInsertText(phrase, url);
   if (!insertText) return body;
   if (position === 'start') return `${insertText}\n\n${body}`;
   return `${body}\n\n${insertText}`;
@@ -379,13 +267,18 @@ function buildBody(platform: Platform, input: GenerateInput): string {
         `${themeKey}で結果が変わる人は、内容ではなく順番を整えています。`,
         `${target}ほど急ぎやすいので、まずは一文目の伝わり方を見直すだけでも反応は変わります。`
       ].join('\n')
-    : [
+    : platform === 'note'
+    ? [
         `${themeKey}で反応を変えたいなら、最初の一文を見直してください。`,
         `${target}に届く発信は、説明より先に「自分ごと」と思わせる流れがあります。`
-      ].join('\n\n');
+      ].join('\n\n')
+    : [
+        `${themeKey}に関連した投稿案です。`,
+        `${target}に伝わりやすい流れで作っています。`
+      ].join('\n');
 
   if (platform === 'X' || platform === 'note') {
-    return applyPhraseToNoteX(base, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
+    return applyPhraseToText(base, input.noteXPhrase, input.noteXUrl, input.noteXInsertPosition);
   }
 
   return base;
@@ -418,7 +311,7 @@ function buildBuzzAnalysis(platform: Platform, input: GenerateInput, hashtags: s
       '冒頭フックを強くしています',
       '短文改行で最後まで読まれやすくしています',
       'テーマに連動した内容にしています',
-      'SNSごとの決まり文を自動挿入しています'
+      '各SNSの決まり文を反映しています'
     ]
   };
 }
@@ -427,10 +320,9 @@ function buildTitle(platform: Platform, input: GenerateInput): string {
   const theme = normalizeTheme(input.theme);
   const target = normalizeTarget(input.target);
 
-  if (platform === 'TikTok') {
-    return `${target}向け｜${theme}で反応が変わる投稿`;
-  }
-
+  if (platform === 'TikTok') return `${target}向け｜${theme}で反応が変わる投稿`;
+  if (platform === 'note') return `${theme}で結果を変える考え方`;
+  if (platform === 'X') return `${theme}で差がつくポイント`;
   return `${theme}投稿案`;
 }
 
