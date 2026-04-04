@@ -21,7 +21,9 @@ const TIKTOK_THEME_TAGS: Record<string, string[]> = {
   副業: ['#副業', '#在宅ワーク', '#お金'],
   集客: ['#集客', '#マーケティング', '#売れる導線'],
   ダイエット: ['#ダイエット', '#痩せる習慣', '#食事改善'],
-  SNS: ['#SNS運用', '#投稿ネタ', '#バズ投稿']
+  SNS: ['#SNS運用', '#投稿ネタ', '#バズ投稿'],
+  子育て: ['#子育て', '#育児', '#ママ向け'],
+  スピリチュアル: ['#引き寄せ', '#運気', '#スピリチュアル']
 };
 
 const PLATFORM_LABEL: Record<Platform, string> = {
@@ -101,10 +103,17 @@ function buildCTA(
   return base;
 }
 
-function buildTitle(platform: Platform, theme: string, target: string) {
+function genderText(gender: GenerateInput['gender']) {
+  if (gender === '男性向け') return '男性向け';
+  if (gender === '女性向け') return '女性向け';
+  return '幅広い層向け';
+}
+
+function buildTitle(platform: Platform, theme: string, target: string, gender: GenerateInput['gender']) {
+  const g = gender === '指定なし' ? '' : `｜${gender}`;
   switch (platform) {
     case 'TikTok':
-      return `${target}向け｜${theme}で反応が変わる投稿の型`;
+      return `${target}向け${g}｜${theme}で反応が変わる投稿の型`;
     case 'X':
       return `${theme}で反応が取れない人へ。改善ポイントを1つだけ言います。`;
     case 'note':
@@ -118,20 +127,28 @@ function buildTitle(platform: Platform, theme: string, target: string) {
   }
 }
 
-function buildHook(theme: string, target: string, tone: GenerateInput['tone']) {
+function buildHook(
+  theme: string,
+  target: string,
+  tone: GenerateInput['tone'],
+  gender: GenerateInput['gender']
+) {
+  const gText = genderText(gender);
+
   if (tone === 'soft') {
-    return `${target}の方へ。${theme}で反応が取れないなら、まず最初の一文を変えてみてください。`;
+    return `${target}の方へ。${gText}として${theme}で反応が取れないなら、まず最初の一文を変えてみてください。`;
   }
   if (tone === 'strong') {
-    return `${theme}で伸びない原因は、内容ではなく“最初の1秒”です。${target}ほどここを外しています。`;
+    return `${theme}で伸びない原因は、内容ではなく“最初の1秒”です。${target}ほどここを外しています。${gText}にも刺さる見せ方が重要です。`;
   }
-  return `${target}が${theme}で結果を出すなら、最初の見せ方を変えるだけで反応はかなり変わります。`;
+  return `${target}が${theme}で結果を出すなら、最初の見せ方を変えるだけで反応はかなり変わります。${gText}に届く表現を意識しましょう。`;
 }
 
 function buildBody(platform: Platform, input: GenerateInput, cta: string) {
   const theme = normalizeTheme(input.theme);
   const target = normalizeTarget(input.target);
-  const hook = buildHook(theme, target, input.tone);
+  const hook = buildHook(theme, target, input.tone, input.gender);
+  const genderLabel = genderText(input.gender);
 
   const commonBlocks = [
     hook,
@@ -148,7 +165,7 @@ function buildBody(platform: Platform, input: GenerateInput, cta: string) {
     '・今すぐ変えるべき1点',
     'このような切り口にすると、最後まで見られやすくなります。',
     '',
-    `${target}向けに言うなら、`,
+    `${target}向け、${genderLabel}に届きやすい言い方としては、`,
     '難しいことを言うより、',
     '「これなら自分にもできそう」と思わせる設計が重要です。',
     '',
@@ -161,6 +178,7 @@ function buildBody(platform: Platform, input: GenerateInput, cta: string) {
       `伸びない投稿の多くは「伝えたいこと」から始まります。`,
       `でも見られる投稿は「相手が気になること」から始まります。`,
       `例えば${theme}なら「失敗する人の共通点」「知らないと損する1点」から入るだけで反応は変わります。`,
+      `${genderLabel}に届く言葉選びを入れるとさらに強くなります。`,
       cta
     ].join('\n');
   }
@@ -178,7 +196,7 @@ function buildBody(platform: Platform, input: GenerateInput, cta: string) {
       `3. すぐ使える改善例を1つ出す`,
       `4. 保存 or プロフ誘導で締める`,
       '',
-      `【例】`,
+      `【${genderLabel}へ刺さりやすい例】`,
       `「${theme}で失敗する人、最初にここを間違えています」`,
       '',
       cta
@@ -193,6 +211,8 @@ function buildBody(platform: Platform, input: GenerateInput, cta: string) {
       '',
       '結論から言うと、重要なのは内容量ではありません。',
       '最初のつかみ、途中の離脱防止、最後の行動導線です。',
+      '',
+      `さらに、${genderLabel}へ自然に届く表現に寄せるとCVも上がりやすくなります。`,
       '',
       '特に最初の一文で「自分に関係ある」と思わせることができるかどうかで、読了率もCVも変わります。',
       '',
@@ -210,9 +230,15 @@ function buildHashtags(platform: Platform, input: GenerateInput): string[] {
 
   const themeTags = findThemeTags(input.theme);
   const fixed = input.includeFixedHashtags ? FIXED_HASHTAGS[platform] : [];
-  const raw = [...themeTags, ...fixed];
+  const genderTags =
+    input.gender === '男性向け'
+      ? ['#男性向け']
+      : input.gender === '女性向け'
+      ? ['#女性向け']
+      : [];
 
-  return Array.from(new Set(raw)).slice(0, platform === 'TikTok' ? 6 : 5);
+  const raw = [...themeTags, ...genderTags, ...fixed];
+  return Array.from(new Set(raw)).slice(0, platform === 'TikTok' ? 7 : 5);
 }
 
 function scoreBuzz(platform: Platform, content: string, hashtags: string[], input: GenerateInput): BuzzAnalysis {
@@ -233,6 +259,7 @@ function scoreBuzz(platform: Platform, content: string, hashtags: string[], inpu
   if (hashtags.length >= 4) readability += 3;
   if (content.includes('失敗')) curiosity += 4;
   if (content.includes('今すぐ')) conversion += 3;
+  if (input.gender !== '指定なし') curiosity += 2;
 
   hookPower = Math.min(99, hookPower);
   readability = Math.min(99, readability);
@@ -248,6 +275,7 @@ function scoreBuzz(platform: Platform, content: string, hashtags: string[], inpu
   if (input.goal === 'sales') reason.push('販売導線を意識したCTA構成です');
   if (hashtags.length > 0) reason.push('テーマ連動ハッシュタグで発見率を補強しています');
   if (input.tone === 'strong') reason.push('スクロール停止を狙う強い言い回しを使用しています');
+  if (input.gender !== '指定なし') reason.push('性別向けの訴求を足して刺さりやすさを高めています');
 
   return {
     score,
@@ -263,7 +291,8 @@ function buildCapcutScript(
   platform: Platform,
   theme: string,
   target: string,
-  cta: string
+  cta: string,
+  gender: GenerateInput['gender']
 ) {
   return [
     `【${PLATFORM_LABEL[platform]}用ショート動画構成】`,
@@ -274,7 +303,7 @@ function buildCapcutScript(
     `言いたいことから話すと飛ばされます。`,
     ``,
     `3. 改善ポイント`,
-    `先に痛み、次に失敗例、最後に改善例を出します。`,
+    `${genderText(gender)}に刺さる言い方を入れながら、先に痛み、次に失敗例、最後に改善例を出します。`,
     ``,
     `4. CTA`,
     `${cta}`
@@ -291,11 +320,11 @@ function buildSinglePost(platform: Platform, input: GenerateInput): GeneratedPos
     input.includeOffer
   );
 
-  const title = buildTitle(platform, theme, target);
+  const title = buildTitle(platform, theme, target, input.gender);
   const hashtags = buildHashtags(platform, input);
   const content = buildBody(platform, input, cta);
   const buzzAnalysis = scoreBuzz(platform, content, hashtags, input);
-  const capcutScript = buildCapcutScript(platform, theme, target, cta);
+  const capcutScript = buildCapcutScript(platform, theme, target, cta, input.gender);
   const videoScenes = buildVideoScenes(input, platform);
   const videoMeta = buildVideoMeta(input, platform);
   const now = new Date().toISOString();
@@ -309,6 +338,7 @@ function buildSinglePost(platform: Platform, input: GenerateInput): GeneratedPos
     capcutScript,
     theme,
     target,
+    gender: input.gender,
     cta,
     buzzScore: buzzAnalysis.score,
     buzzAnalysis,
