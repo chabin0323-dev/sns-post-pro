@@ -1,94 +1,76 @@
-export enum LoadingState {
-  IDLE = 'IDLE',
-  LOADING = 'LOADING',
-  SUCCESS = 'SUCCESS',
-  ERROR = 'ERROR'
-}
-
-export interface BuzzScene {
-  id: string;
-  title: string;
-  text: string;
-  englishKeyword: string;
-  durationSec: number;
-}
-
-export interface BuzzScriptPack {
-  questionTitle: string;
-  hook: string;
-  denial: string;
-  empathyStory: string;
-  shockOrSolution: string;
-  pullLine: string;
-  scenes: BuzzScene[];
-  fullScript: string;
-}
-
-export interface TrendPack {
-  trendKeywords: string[];
-  hookPatterns: string[];
-  structureTemplates: string[];
-  generatedTrendTitle: string;
-}
-
-export interface InfiniteIdeaPack {
-  fortuneSummary: string;
-  loveStory: string;
-  endlessIdeas: string[];
-}
-
-export interface ScheduleItem {
-  id: string;
-  label: string;
-  time: string;
-  outputTitle: string;
-  status: 'draft' | 'ready';
-}
-
-export interface PostPackage {
-  tiktokCaption: string;
-  finalCta: string;
-  hashtags: string[];
-  readyToPostText: string;
-}
+export type Platform = 'TikTok' | 'X' | 'note' | 'Instagram' | 'YouTube';
 
 export interface BuzzAnalysis {
   score: number;
-  strengths: string[];
-  weakPoints: string[];
-  optimizationNext: string[];
-  topThemesFromHistory: string[];
-  topHookPatternsFromHistory: string[];
+  hookPower: number;
+  readability: number;
+  curiosity: number;
+  conversion: number;
+  reason: string[];
 }
 
-export interface AutoVideoResult {
-  videoDataUrl: string;
-  videoMimeType: string;
-  sceneImages: string[];
-  durationSec: number;
+export interface VideoScene {
+  id: number;
+  duration: string;
+  visual: string;
+  telop: string;
+  narration: string;
 }
 
 export interface GeneratedPost {
+  id: string;
+  platform: Platform;
   title: string;
   content: string;
   hashtags: string[];
   capcutScript: string;
-  xPost: string;
-  instagramPost: string;
-  youtubePost: string;
+  theme: string;
+  target: string;
+  cta: string;
+  buzzScore: number;
+  buzzAnalysis: BuzzAnalysis;
+  createdAt: string;
+  updatedAt: string;
+  status: 'draft' | 'ready' | 'posted';
+  videoTitle: string;
+  videoScenes: VideoScene[];
+  videoDescription: string;
+  thumbnailText: string;
+}
 
-  theme?: string;
-  timestamp?: Date | string;
-  autoCtaEnabled?: boolean;
-  scheduleTimes?: string[];
-  hashtagMode?: 'あり' | 'なし';
+export interface GenerateInput {
+  theme: string;
+  target: string;
+  platforms: Platform[];
+  tone: 'soft' | 'normal' | 'strong';
+  goal: 'engagement' | 'sales' | 'followers' | 'lead';
+  includeHashtags: boolean;
+  includeFixedHashtags: boolean;
+  hashtagMode: 'auto' | 'none';
+  ctaMode: 'soft' | 'normal' | 'strong';
+  includeUrgency: boolean;
+  includeOffer: boolean;
+}
 
-  buzzScript?: BuzzScriptPack;
-  trendPack?: TrendPack;
-  ideaPack?: InfiniteIdeaPack;
-  schedulePack?: ScheduleItem[];
-  postPackage?: PostPackage;
-  buzzAnalysis?: BuzzAnalysis;
+export interface TrendIdea {
+  id: string;
+  angle: string;
+  title: string;
+  hook: string;
+  reason: string;
+}
 
-  autoVideo?: AutoVideoResult | null;
+export interface InputFormProps {
+  value: GenerateInput;
+  onChange: (next: GenerateInput) => void;
+  onGenerate: () => void;
+  onGenerateTrends: () => void;
+  onGenerateIdeas: () => void;
+  loading: boolean;
+}
+
+export interface ResultCardProps {
+  item: GeneratedPost;
+  onDelete: (id: string) => void;
+  onBuildVideo: (id: string) => void;
 }
