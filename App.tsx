@@ -1,12 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import InputForm from './components/InputForm';
 import ResultCard from './components/ResultCard';
-import { generateIdeaPosts, generatePosts, generateTrendIdeas } from './services/localPostGenerator';
+import { generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_history_v3';
-const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v3';
-const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v3';
+const STORAGE_KEY = 'sns_post_generator_history_v4';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v4';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v4';
 
 const defaultInput: GenerateInput = {
   theme: '',
@@ -50,8 +50,6 @@ export default function App() {
   const [history, setHistory] = useState<GeneratedPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [trends, setTrends] = useState<TrendIdea[]>([]);
-  const [ideas, setIdeas] = useState<string[]>([]);
-  const [videoPreviewId, setVideoPreviewId] = useState<string | null>(null);
   const [themeHistory, setThemeHistory] = useState<string[]>([]);
   const [targetHistory, setTargetHistory] = useState<string[]>([]);
 
@@ -139,19 +137,8 @@ export default function App() {
     setTrends(generateTrendIdeas(input.theme, input.target));
   };
 
-  const handleGenerateIdeas = () => {
-    setIdeas(generateIdeaPosts(input.theme, input.target));
-  };
-
   const handleDelete = (id: string) => {
     setHistory((prev) => prev.filter((item) => item.id !== id));
-    if (videoPreviewId === id) {
-      setVideoPreviewId(null);
-    }
-  };
-
-  const handleBuildVideo = (id: string) => {
-    setVideoPreviewId(id);
   };
 
   const handleApplyThemeSuggestion = (theme: string) => {
@@ -167,8 +154,6 @@ export default function App() {
       target
     }));
   };
-
-  const previewItem = history.find((x) => x.id === videoPreviewId) ?? null;
 
   return (
     <div style={shellStyle}>
@@ -196,7 +181,6 @@ export default function App() {
             onChange={setInput}
             onGenerate={handleGenerate}
             onGenerateTrends={handleGenerateTrends}
-            onGenerateIdeas={handleGenerateIdeas}
             loading={loading}
             themeHistory={themeHistory}
             targetHistory={targetHistory}
@@ -269,62 +253,6 @@ export default function App() {
                 </div>
               </div>
             )}
-
-            {ideas.length > 0 && (
-              <div style={glassStyle}>
-                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>提案</div>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {ideas.map((idea, index) => (
-                    <div
-                      key={`${idea}_${index}`}
-                      style={{
-                        background: 'rgba(12,16,35,0.7)',
-                        borderRadius: 14,
-                        padding: '12px 14px',
-                        color: 'rgba(255,255,255,0.88)',
-                        fontSize: 14
-                      }}
-                    >
-                      {idea}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {previewItem && (
-              <div style={glassStyle}>
-                <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>動画構成プレビュー</div>
-                <div style={{ color: '#fff', fontSize: 16, fontWeight: 800, marginBottom: 10 }}>
-                  {previewItem.videoTitle}
-                </div>
-                <div style={{ display: 'grid', gap: 10 }}>
-                  {previewItem.videoScenes.map((scene) => (
-                    <div
-                      key={scene.id}
-                      style={{
-                        background: 'rgba(12,16,35,0.72)',
-                        borderRadius: 14,
-                        padding: 12
-                      }}
-                    >
-                      <div style={{ color: '#fff', fontWeight: 800 }}>
-                        Scene {scene.id} / {scene.duration}
-                      </div>
-                      <div style={{ color: '#f6d2ff', fontSize: 13, marginTop: 4 }}>
-                        テロップ：{scene.telop}
-                      </div>
-                      <div style={{ color: 'rgba(255,255,255,0.82)', fontSize: 13, marginTop: 4 }}>
-                        映像：{scene.visual}
-                      </div>
-                      <div style={{ color: 'rgba(255,255,255,0.88)', fontSize: 13, marginTop: 4, lineHeight: 1.7 }}>
-                        ナレーション：{scene.narration}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -346,7 +274,6 @@ export default function App() {
                   key={item.id}
                   item={item}
                   onDelete={handleDelete}
-                  onBuildVideo={handleBuildVideo}
                 />
               ))}
             </div>
