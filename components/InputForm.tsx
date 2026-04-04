@@ -3,17 +3,23 @@ import type { GenerateInput, InputFormProps, Platform } from '../types';
 
 const ALL_PLATFORMS: Platform[] = ['TikTok', 'X', 'note', 'Instagram', 'YouTube'];
 
-const THEME_PRESETS = [
-  '恋愛',
-  '告白',
-  '復縁',
-  '片想い',
-  '美容',
-  '副業',
-  '集客',
-  'ダイエット',
-  'SNS運用',
-  '占い'
+const THEME_TITLE_SUGGESTIONS = [
+  '恋愛で反応が変わる投稿タイトル',
+  '告白初心者向け投稿タイトル',
+  '復縁したい人向け投稿タイトル',
+  '片想い中の人向け投稿タイトル',
+  '脈ありサインを見抜く投稿タイトル',
+  '脈なしから逆転する投稿タイトル',
+  '恋愛心理で惹きつける投稿タイトル',
+  '告白のタイミングで悩む人向けタイトル',
+  '復縁でやってはいけない行動タイトル',
+  '恋愛で不安が強い人向けタイトル',
+  '美容で変わりたい人向け投稿タイトル',
+  '副業初心者向け投稿タイトル',
+  '集客で悩んでいる人向け投稿タイトル',
+  'ダイエットが続かない人向けタイトル',
+  'SNS運用で伸ばしたい人向けタイトル',
+  '占いが好きな人向け投稿タイトル'
 ];
 
 const TARGET_PRESETS = [
@@ -79,6 +85,26 @@ const actionBtn: React.CSSProperties = {
   fontSize: 14
 };
 
+function normalizeText(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, '');
+}
+
+function scoreSuggestion(item: string, keyword: string) {
+  const normalizedItem = normalizeText(item);
+  const normalizedKeyword = normalizeText(keyword);
+
+  if (!normalizedKeyword) return 1;
+  if (normalizedItem === normalizedKeyword) return 100;
+  if (normalizedItem.startsWith(normalizedKeyword)) return 80;
+  if (normalizedItem.includes(normalizedKeyword)) return 60;
+
+  let partial = 0;
+  for (const char of normalizedKeyword) {
+    if (normalizedItem.includes(char)) partial += 1;
+  }
+  return partial;
+}
+
 export default function InputForm({
   value,
   onChange,
@@ -112,17 +138,24 @@ export default function InputForm({
   };
 
   const themeSuggestions = useMemo(() => {
-    const merged = [...THEME_PRESETS, ...themeHistory];
+    const historyAsTitles = themeHistory.map((item) => `${item}の投稿タイトル案`);
+    const merged = [...historyAsTitles, ...THEME_TITLE_SUGGESTIONS];
     const unique = Array.from(new Set(merged.map((x) => x.trim()).filter(Boolean)));
     const keyword = value.theme.trim();
 
-    if (!keyword) return unique.slice(0, 8);
-
-    return unique.filter((item) => item.includes(keyword)).slice(0, 8);
+    return unique
+      .map((item) => ({
+        item,
+        score: scoreSuggestion(item, keyword)
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.item)
+      .slice(0, 10);
   }, [themeHistory, value.theme]);
 
   const themeHistoryList = useMemo(() => {
-    return Array.from(new Set(themeHistory.map((x) => x.trim()).filter(Boolean))).slice(0, 8);
+    return Array.from(new Set(themeHistory.map((x) => x.trim()).filter(Boolean))).slice(0, 10);
   }, [themeHistory]);
 
   const targetSuggestions = useMemo(() => {
@@ -132,7 +165,15 @@ export default function InputForm({
 
     if (!keyword) return unique.slice(0, 8);
 
-    return unique.filter((item) => item.includes(keyword)).slice(0, 8);
+    return unique
+      .map((item) => ({
+        item,
+        score: scoreSuggestion(item, keyword)
+      }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.item)
+      .slice(0, 8);
   }, [targetHistory, value.target]);
 
   const visibleThemeChips = themeMode === 'suggestion' ? themeSuggestions : themeHistoryList;
@@ -182,7 +223,10 @@ export default function InputForm({
           <input
             style={{ ...softInput, paddingLeft: 48 }}
             value={value.theme}
-            onChange={(e) => setField('theme', e.target.value)}
+            onChange={(e) => {
+              setField('theme', e.target.value);
+              setThemeMode('suggestion');
+            }}
             placeholder="投稿テーマを入力"
           />
           <span
@@ -224,7 +268,7 @@ export default function InputForm({
                 onClick={() => onApplyThemeSuggestion(item)}
               >
                 {item}
-                <span style={{ color: '#90a0b8' }}>×</span>
+                {themeMode === 'history' && <span style={{ color: '#90a0b8' }}>×</span>}
               </button>
             ))
           )}
