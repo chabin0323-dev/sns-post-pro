@@ -1,5 +1,7 @@
 export type Platform = 'TikTok' | 'X' | 'note' | 'Instagram' | 'YouTube';
 
+export type Gender = '指定なし' | '男性向け' | '女性向け';
+
 export interface BuzzAnalysis {
   score: number;
   hookPower: number;
@@ -26,6 +28,7 @@ export interface GeneratedPost {
   capcutScript: string;
   theme: string;
   target: string;
+  gender: Gender;
   cta: string;
   buzzScore: number;
   buzzAnalysis: BuzzAnalysis;
@@ -41,6 +44,7 @@ export interface GeneratedPost {
 export interface GenerateInput {
   theme: string;
   target: string;
+  gender: Gender;
   platforms: Platform[];
   tone: 'soft' | 'normal' | 'strong';
   goal: 'engagement' | 'sales' | 'followers' | 'lead';
@@ -67,6 +71,10 @@ export interface InputFormProps {
   onGenerateTrends: () => void;
   onGenerateIdeas: () => void;
   loading: boolean;
+  themeHistory: string[];
+  targetHistory: string[];
+  onApplyThemeSuggestion: (theme: string) => void;
+  onApplyTargetSuggestion: (target: string) => void;
 }
 
 export interface ResultCardProps {
