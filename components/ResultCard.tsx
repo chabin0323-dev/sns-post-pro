@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { ResultCardProps } from '../types';
+import type { Platform, ResultCardProps } from '../types';
 
 const shell: React.CSSProperties = {
   background: 'linear-gradient(180deg, #071225 0%, #09172b 100%)',
@@ -15,6 +15,16 @@ const inner: React.CSSProperties = {
   borderRadius: 16,
   padding: 14
 };
+
+function getCopyLabel(platform: Platform, copied: boolean) {
+  if (copied) return 'コピーしました';
+
+  if (platform === 'TikTok') return '📋 TikTokとしてコピー';
+  if (platform === 'note') return '📋 noteとしてコピー';
+  if (platform === 'X') return '📋 Xとしてコピー';
+  if (platform === 'Instagram') return '📋 Instagramとしてコピー';
+  return '📋 YouTubeとしてコピー';
+}
 
 export default function ResultCard({ item, onDelete }: ResultCardProps) {
   const [copied, setCopied] = useState(false);
@@ -100,7 +110,7 @@ export default function ResultCard({ item, onDelete }: ResultCardProps) {
           cursor: 'pointer'
         }}
       >
-        {copied ? 'コピーしました' : '📋 TikTokとしてコピー'}
+        {getCopyLabel(item.platform, copied)}
       </button>
     </div>
   );
