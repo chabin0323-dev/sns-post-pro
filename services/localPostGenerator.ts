@@ -1,4 +1,4 @@
-import type { GenerateInput, GeneratedPost } from '../types';
+import { GenerateInput, GeneratedPost, Platform } from '../types';
 
 function rand<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
@@ -9,18 +9,17 @@ function hooks(theme: string) {
     `実はこれ、${theme}のサインです`,
     `${theme}で9割が間違えてます`,
     `${theme}で損してる人の特徴`,
-    `${theme}で一気に変わる方法`,
+    `${theme}で逆転する方法`,
     `${theme}でやってはいけない行動`
   ];
 }
 
-function buildContent(input: GenerateInput) {
-  const h = rand(hooks(input.theme));
+function buildContent(theme: string) {
+  const hook = rand(hooks(theme));
 
   const patterns = [
-
     [
-      h,
+      hook,
       '',
       'これ知らないと',
       '普通に損します',
@@ -37,9 +36,8 @@ function buildContent(input: GenerateInput) {
       '',
       '続きはプロフィールから👇'
     ],
-
     [
-      h,
+      hook,
       '',
       'これ気づいてますか？',
       '',
@@ -54,57 +52,37 @@ function buildContent(input: GenerateInput) {
       '全部変わります',
       '',
       '続きはプロフィールから👇'
-    ],
-
-    [
-      h,
-      '',
-      '実は逆です',
-      '',
-      '多くの人が',
-      '勘違いしています',
-      '',
-      'だから失敗します',
-      '',
-      '正しくは',
-      '',
-      'これを先にやること',
-      '',
-      '続きはプロフィールから👇'
     ]
-
   ];
 
   return rand(patterns).join('\n');
 }
 
+function buildPost(platform: Platform, input: GenerateInput): GeneratedPost {
+  return {
+    id: Date.now().toString(),
+    platform,
+    title: input.theme,
+    content: buildContent(input.theme),
+    hashtags: ['#おすすめ', '#バズりたい'],
+    theme: input.theme,
+    target: input.target,
+    gender: input.gender,
+    buzzScore: 90,
+    buzzAnalysis: {
+      score: 90,
+      hookPower: 90,
+      readability: 85,
+      curiosity: 88,
+      conversion: 87,
+      reason: ['バズ構造']
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: 'ready'
+  };
+}
+
 export function generatePosts(input: GenerateInput): GeneratedPost[] {
-
-  return input.platforms.map((p) => {
-
-    return {
-      id: Date.now().toString(),
-      platform: p,
-      title: input.theme,
-      content: buildContent(input),
-      hashtags: ['#おすすめ', '#バズりたい'],
-      theme: input.theme,
-      target: input.target,
-      gender: input.gender,
-      buzzScore: 90,
-      buzzAnalysis: {
-        score: 90,
-        hookPower: 90,
-        readability: 85,
-        curiosity: 88,
-        conversion: 87,
-        reason: ['バズ構造']
-      },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      status: 'ready'
-    };
-
-  });
-
+  return input.platforms.map((p) => buildPost(p, input));
 }
