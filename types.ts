@@ -1,5 +1,8 @@
 export type Platform = 'TikTok' | 'X' | 'note' | 'Instagram' | 'YouTube';
 export type Gender = '指定なし' | '男性向け' | '女性向け';
+export type InsertPosition = 'start' | 'end';
+export type TiktokInsertPosition = 'start' | 'end' | 'both';
+export type LengthMode = '短め' | '標準' | '長め';
 
 export interface BuzzAnalysis {
   score: number;
@@ -39,6 +42,15 @@ export interface GenerateInput {
   ctaMode: 'soft' | 'normal' | 'strong';
   includeUrgency: boolean;
   includeOffer: boolean;
+
+  lengthMode: LengthMode;
+
+  noteXPhrase: string;
+  noteXUrl: string;
+  noteXInsertPosition: InsertPosition;
+
+  tiktokPhrase: string;
+  tiktokInsertPosition: TiktokInsertPosition;
 }
 
 export interface TrendIdea {
