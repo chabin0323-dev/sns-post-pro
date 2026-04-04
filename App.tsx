@@ -4,13 +4,13 @@ import ResultCard from './components/ResultCard';
 import { generatePosts, generateTrendIdeas } from './services/localPostGenerator';
 import type { GenerateInput, GeneratedPost, TrendIdea } from './types';
 
-const STORAGE_KEY = 'sns_post_generator_history_v6';
-const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_v6';
-const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_v6';
+const STORAGE_KEY = 'sns_post_generator_history_fixed_v1';
+const THEME_HISTORY_KEY = 'sns_post_generator_theme_history_fixed_v1';
+const TARGET_HISTORY_KEY = 'sns_post_generator_target_history_fixed_v1';
 
 const defaultInput: GenerateInput = {
   theme: '',
-  target: '',
+  target: '初心者',
   gender: '指定なし',
   platforms: ['TikTok'],
   tone: 'strong',
@@ -52,22 +52,23 @@ export default function App() {
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as GeneratedPost[];
+      const rawHistory = localStorage.getItem(STORAGE_KEY);
+      const rawThemeHistory = localStorage.getItem(THEME_HISTORY_KEY);
+      const rawTargetHistory = localStorage.getItem(TARGET_HISTORY_KEY);
+
+      if (rawHistory) {
+        const parsed = JSON.parse(rawHistory) as GeneratedPost[];
         if (Array.isArray(parsed)) setHistory(parsed);
       }
 
-      const rawTheme = localStorage.getItem(THEME_HISTORY_KEY);
-      if (rawTheme) {
-        const parsedTheme = JSON.parse(rawTheme) as string[];
-        if (Array.isArray(parsedTheme)) setThemeHistory(parsedTheme);
+      if (rawThemeHistory) {
+        const parsed = JSON.parse(rawThemeHistory) as string[];
+        if (Array.isArray(parsed)) setThemeHistory(parsed);
       }
 
-      const rawTarget = localStorage.getItem(TARGET_HISTORY_KEY);
-      if (rawTarget) {
-        const parsedTarget = JSON.parse(rawTarget) as string[];
-        if (Array.isArray(parsedTarget)) setTargetHistory(parsedTarget);
+      if (rawTargetHistory) {
+        const parsed = JSON.parse(rawTargetHistory) as string[];
+        if (Array.isArray(parsed)) setTargetHistory(parsed);
       }
     } catch (error) {
       console.error('load error', error);
@@ -75,54 +76,28 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
-    } catch (error) {
-      console.error('history save error', error);
-    }
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
   }, [history]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(THEME_HISTORY_KEY, JSON.stringify(themeHistory));
-    } catch (error) {
-      console.error('theme history save error', error);
-    }
+    localStorage.setItem(THEME_HISTORY_KEY, JSON.stringify(themeHistory));
   }, [themeHistory]);
 
   useEffect(() => {
-    try {
-      localStorage.setItem(TARGET_HISTORY_KEY, JSON.stringify(targetHistory));
-    } catch (error) {
-      console.error('target history save error', error);
-    }
+    localStorage.setItem(TARGET_HISTORY_KEY, JSON.stringify(targetHistory));
   }, [targetHistory]);
-
-  const summary = useMemo(() => {
-    const total = history.length;
-    const tiktokCount = history.filter((x) => x.platform === 'TikTok').length;
-    const avgBuzz =
-      total > 0
-        ? Math.round(history.reduce((sum, item) => sum + item.buzzScore, 0) / total)
-        : 0;
-
-    return { total, tiktokCount, avgBuzz };
-  }, [history]);
-
-  const latestItem = useMemo(() => history[0] ?? null, [history]);
 
   const saveRecentValue = (value: string, prevList: string[]) => {
     const clean = value.trim();
     if (!clean) return prevList;
-    return [clean, ...prevList.filter((x) => x !== clean)].slice(0, 8);
+    return [clean, ...prevList.filter((x) => x !== clean)].slice(0, 10);
   };
 
   const handleGenerate = () => {
     setLoading(true);
-
     try {
-      const items = generatePosts(input);
-      setHistory((prev) => [...items, ...prev]);
+      const posts = generatePosts(input);
+      setHistory((prev) => [...posts, ...prev]);
       setThemeHistory((prev) => saveRecentValue(input.theme, prev));
       setTargetHistory((prev) => saveRecentValue(input.target, prev));
     } finally {
@@ -139,18 +114,24 @@ export default function App() {
   };
 
   const handleApplyThemeSuggestion = (theme: string) => {
-    setInput((prev) => ({
-      ...prev,
-      theme
-    }));
+    setInput((prev) => ({ ...prev, theme }));
   };
 
   const handleApplyTargetSuggestion = (target: string) => {
-    setInput((prev) => ({
-      ...prev,
-      target
-    }));
+    setInput((prev) => ({ ...prev, target }));
   };
+
+  const summary = useMemo(() => {
+    const total = history.length;
+    const tiktokCount = history.filter((x) => x.platform === 'TikTok').length;
+    const avgBuzz = total > 0
+      ? Math.round(history.reduce((sum, item) => sum + item.buzzScore, 0) / total)
+      : 0;
+
+    return { total, tiktokCount, avgBuzz };
+  }, [history]);
+
+  const latestItem = history[0] ?? null;
 
   return (
     <div style={pageStyle}>
@@ -160,7 +141,7 @@ export default function App() {
             SNS投稿生成アプリ
           </div>
           <div style={{ color: '#58708f', fontSize: 15, lineHeight: 1.7 }}>
-            画像の見た目に近いテーマ欄と、TikTokの短文構成でそのままコピーできる形に戻した版です。
+            提案・履歴・ターゲット・性別・トレンド生成を復活しつつ、TikTok向けにバズ構造へ修正した版です。
           </div>
         </div>
 
@@ -187,7 +168,6 @@ export default function App() {
           <div style={{ display: 'grid', gap: 16 }}>
             <div style={darkPanel}>
               <div style={{ color: '#fff', fontWeight: 900, marginBottom: 14 }}>ダッシュボード</div>
-
               <MetricCard label="累計生成" value={`${summary.total}`} />
               <MetricCard label="TikTok生成数" value={`${summary.tiktokCount}`} />
               <MetricCard label="平均バズ度" value={`${summary.avgBuzz}`} />
