@@ -83,7 +83,6 @@ export default function InputForm({
   onChange,
   onGenerate,
   onGenerateTrends,
-  onGenerateIdeas,
   loading,
   themeHistory,
   targetHistory,
@@ -152,7 +151,7 @@ export default function InputForm({
         </div>
 
         <div>
-          <label style={labelStyle}>最近使った投稿テーマ履歴</label>
+          <label style={labelStyle}>前回使った投稿テーマ</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {themeHistory.length === 0 ? (
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>まだ履歴がありません</div>
@@ -202,7 +201,7 @@ export default function InputForm({
         </div>
 
         <div>
-          <label style={labelStyle}>最近使ったターゲット履歴</label>
+          <label style={labelStyle}>前回使ったターゲット</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {targetHistory.length === 0 ? (
               <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13 }}>まだ履歴がありません</div>
@@ -364,47 +363,7 @@ export default function InputForm({
           </div>
         </div>
 
-        <div style={{ ...cardStyle, padding: 16 }}>
-          <div style={{ color: '#fff', fontWeight: 900, marginBottom: 12 }}>提案</div>
-
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, marginBottom: 8 }}>
-              テーマ提案
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {THEME_PRESETS.map((theme) => (
-                <button
-                  key={theme}
-                  type="button"
-                  style={chipStyle}
-                  onClick={() => onApplyThemeSuggestion(theme)}
-                >
-                  {theme}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <div style={{ color: 'rgba(255,255,255,0.72)', fontSize: 13, marginBottom: 8 }}>
-              ターゲット提案
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {TARGET_PRESETS.map((target) => (
-                <button
-                  key={target}
-                  type="button"
-                  style={chipStyle}
-                  onClick={() => onApplyTargetSuggestion(target)}
-                >
-                  {target}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 12 }}>
           <button
             type="button"
             onClick={onGenerate}
@@ -431,20 +390,6 @@ export default function InputForm({
             }}
           >
             トレンド生成
-          </button>
-
-          <button
-            type="button"
-            onClick={onGenerateIdeas}
-            style={{
-              ...buttonBase,
-              background: 'rgba(255,255,255,0.1)',
-              color: '#fff',
-              minHeight: 54,
-              border: '1px solid rgba(255,255,255,0.12)'
-            }}
-          >
-            ネタ生成
           </button>
         </div>
       </div>
