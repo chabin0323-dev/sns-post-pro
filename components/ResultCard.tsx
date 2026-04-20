@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { Platform, ResultCardProps } from '../types';
+import ImagePromptPanel from './ImagePromptPanel';
 
 const shell: React.CSSProperties = {
   background: 'linear-gradient(180deg, #071225 0%, #09172b 100%)',
@@ -112,6 +113,8 @@ export default function ResultCard({ item, onDelete }: ResultCardProps) {
       >
         {getCopyLabel(item.platform, copied)}
       </button>
+
+      <ImagePromptPanel post={item} />
     </div>
   );
 }
